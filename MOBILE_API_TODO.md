@@ -55,6 +55,51 @@ Useful fields:
 
 Keep this endpoint scoped to the authenticated hub partner and avoid admin-only settlement or monitoring data.
 
+## Locker Availability Override
+
+SequoHub Settings includes an operator control to temporarily close a locker when it is broken, blocked,
+jammed, dirty, or otherwise unusable. `MOBILE_API_GUIDE.md` currently documents relay parcel problem reports,
+but it does not document a direct locker availability endpoint.
+
+Suggested contract shape:
+
+| Method | Path | Body | Purpose |
+| --- | --- | --- | --- |
+| POST | `/api/hub/lockers/{lockerId}/availability` | `relayPointId`, `status`, `reason`, `idempotencyKey` | Mark a locker as available, temporarily unavailable, maintenance, or blocked. |
+
+Useful fields:
+
+- `status`: `AVAILABLE`, `TEMPORARILY_UNAVAILABLE`, `MAINTENANCE`, `BLOCKED`
+- `reason`: short enum or note such as `BROKEN_DOOR`, `JAMMED_LOCK`, `DIRTY`, `WRONG_CONTENTS`, `OTHER`
+- `expectedAvailableAt?`: optional estimated recovery time
+- `photoEvidence?`: optional later if the backend supports safe proof upload
+
+This must be scoped to the authenticated relay point. Shop staff should not be able to change lockers for
+another hub.
+
+## Hub Opening Hours And Temporary Closures
+
+SequoHub Settings includes editable opening hours so the system can avoid promising pickup/return windows
+when the shop is closed, closed for one day, or closing earlier than usual. `MOBILE_API_GUIDE.md` does not
+currently document a hub timetable endpoint.
+
+Suggested contract shape:
+
+| Method | Path | Body/query | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/hub/opening-hours` | `relayPointId` | Read the regular weekly timetable and temporary exceptions. |
+| PUT | `/api/hub/opening-hours` | `relayPointId`, `timezone`, `weeklyHours`, `exceptions`, `idempotencyKey` | Update hub opening hours and closure exceptions. |
+
+Useful fields:
+
+- `timezone`: market timezone, for example `Africa/Lome`
+- `weeklyHours`: day-of-week, `isOpen`, `opensAt`, `closesAt`
+- `exceptions`: date, `isClosed`, `opensAt?`, `closesAt?`, `reason?`
+- `effectiveUntil?`: optional expiry for temporary one-off changes
+
+These hours should affect customer pickup instructions, return drop-off guidance, courier relay deposit
+planning, and Sequo collection scheduling.
+
 ## Account Deletion
 
 Settings includes a delete-account entry, but `MOBILE_API_GUIDE.md` currently documents logout and
