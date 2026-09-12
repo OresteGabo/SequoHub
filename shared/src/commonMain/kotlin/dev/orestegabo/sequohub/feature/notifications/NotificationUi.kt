@@ -185,7 +185,7 @@ fun sampleNotifications(): List<NotificationMessageUi> =
         ),
         NotificationMessageUi(
             id = "msg-2045",
-            title = "Support hold on D02",
+            title = "Manager review on D02",
             body = "Damaged outer packaging reported. Standard release is paused.",
             time = "Yesterday",
             type = NotificationType.Hold,
