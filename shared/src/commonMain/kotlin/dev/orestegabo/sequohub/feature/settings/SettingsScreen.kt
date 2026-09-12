@@ -267,7 +267,7 @@ private fun SettingsMainPage(
             SettingsRow(
                 icon = Icons.Filled.Notifications,
                 title = "Operational alerts",
-                subtitle = "Overdue, support hold, and collection reminders.",
+                subtitle = "Fee reminders, maintenance, and collection alerts.",
                 trailingText = "On",
             )
         }
