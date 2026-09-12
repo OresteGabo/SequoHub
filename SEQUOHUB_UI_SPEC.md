@@ -31,13 +31,14 @@ Floating glass-style bottom navigation with five tabs:
 
 | Tab | Purpose |
 | --- | --- |
-| Hub | Home dashboard with metrics and 5x5 locker grid. |
 | Scan | Full-screen scanner and package intake flow. |
 | Actions | Customer pickup and return handover workflows. |
+| Hub | Center/default home dashboard with metrics and 5x5 locker grid. |
 | Audit | Timeline of handovers, collections, and system events. |
 | Settings | Operator account, hub, appearance, language, workflow, support, and privacy settings. |
 
-The current implementation uses numeric tab symbols until a shared icon library is added.
+The Hub tab must remain visually centered and selected by default.
+Bottom navigation items use Material icons, with the centered Hub tab slightly emphasized.
 
 ## Theme Source
 
@@ -79,10 +80,13 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 
 ### Hub Dashboard
 
-- Header: eyebrow, large screen title, hub name, live sync badge.
+- Material top app bar: eyebrow, large screen title, hub name, and live sync badge.
+- Material primary tabs for Grid and Attention views.
+- Locker search field for direct A01-E05 lookup.
 - Metric row: occupied lockers, fees due today, pending Sequo collections.
 - Locker grid: 25 stable cells from `A01` to `E05`.
 - Bottom sheet: opens on locker tap, showing locker state, package age, reference, next action, and fee notice when relevant.
+- Locker problem action maps to `POST /api/relay/parcels/{parcelId}/problem`.
 
 ### Customer Pickup Fee Modal
 
@@ -90,6 +94,7 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Shows extra storage fee in integer CFA francs.
 - States that the fee source is backend storage rules.
 - Primary action: `Collect Fee & Open Locker`.
+- Pickup release maps to `POST /api/relay/parcels/{parcelId}/release`.
 
 ### Scan And Receive Flow
 
@@ -99,6 +104,8 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
   - `sealed_ok`
   - `damaged_outer_packaging`
 - Best-free-locker assignment panel for one-tap intake.
+- Intake assignment maps to `POST /api/relay/parcels`.
+- Camera/manual credential resolution maps to `POST /api/hub/scan/resolve`, currently tracked in `MOBILE_API_TODO.md`.
 
 ### Settings
 
@@ -108,9 +115,49 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
   - theme and large-label appearance
   - language: French, English, and Éwé/Mina for Lomé/Togo context
   - counter workflow preferences
+  - notification device controls for `SEQUO_HUB` push registration and revocation
+  - notification channel preferences for push, in-app, SMS, and quiet hours
   - support and privacy
   - logout and account deletion
 - Account deletion and cross-device preference sync remain API TODO items until backend contracts exist.
+
+### Activity And Notification Inbox
+
+- Activity uses tabs for local audit events and in-app notifications.
+- The inbox maps to the documented notification endpoints:
+  - read inbox: `GET /api/notifications/inbox`
+  - mark read: `PATCH /api/notifications/inbox/{messageId}/read`
+  - archive: `POST /api/notifications/inbox/{messageId}/archive`
+  - restore: `DELETE /api/notifications/inbox/{messageId}/archive`
+- Push controls in Settings map to:
+  - register device: `POST /api/notifications/devices/fcm` with `appFamily=SEQUO_HUB`
+  - revoke device: `DELETE /api/notifications/devices/{appFamily}/{deviceId}`
+- Notification channel preferences map to:
+  - read effective preference: `GET /api/notifications/preferences/{appFamily}/effective?eventType=...`
+  - save preference: `PUT /api/notifications/preferences/{appFamily}`
+- `MOBILE_API_TODO.md` tracks that these preference routes exist in the API repo but are missing from the
+  mobile guide.
+
+### Handover API Coverage
+
+- Pickup code validation uses the future unified scan resolver in `MOBILE_API_TODO.md`.
+- Fee collection and locker opening map to `POST /api/relay/parcels/{parcelId}/release`.
+- Return validation reads `GET /api/returns/{returnId}`.
+- Return receipt maps to `POST /api/returns/{returnId}/relay-dropoff`.
+- Admin-only storage-fee assessment, return-to-seller closure, and operational monitoring endpoints are
+  represented as read-only status/fee states in the UI, not exposed as shop-counter actions.
+
+## Material Components In Use
+
+- App bars / toolbars: shared top header for each main destination.
+- Badges: bottom navigation audit count and status labels.
+- Chips: theme and language choices.
+- Dialogs: logout and account deletion confirmations.
+- Dividers: settings sections and hub search separation.
+- Search: locker lookup by locker ID.
+- Snackbars: action feedback before backend wiring exists.
+- Tabs: Hub dashboard modes.
+- Sheets: locker detail bottom sheet.
 
 ## Implementation Notes
 
