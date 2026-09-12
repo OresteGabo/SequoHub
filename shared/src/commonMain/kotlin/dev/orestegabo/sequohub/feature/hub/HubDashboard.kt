@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,6 +64,7 @@ fun HubDashboard(
     } else {
         lockers.filter { it.id.contains(lockerSearch.trim(), ignoreCase = true) }
     }
+    val attentionLockers = visibleLockers.filter { it.needsAttention }
 
     AppScroll {
         dev.orestegabo.sequohub.core.designsystem.component.TopHeader(
@@ -115,78 +115,175 @@ fun HubDashboard(
             )
         }
 
-        MinimalCard {
-            OutlinedTextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = lockerSearch,
-                onValueChange = { lockerSearch = it.take(3).uppercase() },
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = null,
-                    )
-                },
-                placeholder = { Text("Search locker, e.g. A04") },
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Characters,
-                    keyboardType = KeyboardType.Ascii,
-                ),
-                shape = SequoHubShapes.Small,
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SectionTitle("Locker grid")
-                    Text(
-                        text = "Tap a box to inspect package age and status.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                StatusBadge(label = "5x5", tone = BadgeTone.Neutral)
-            }
+        LockerSearchCard(
+            lockerSearch = lockerSearch,
+            onLockerSearchChange = { lockerSearch = it.take(3).uppercase() },
+        )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                visibleLockers.chunked(5).forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        row.forEach { locker ->
-                            LockerCell(
-                                modifier = Modifier.weight(1f),
-                                locker = locker,
-                                onClick = { onLockerTap(locker) },
-                            )
-                        }
+        if (selectedDashboardTab == 0) {
+            LockerGridCard(
+                lockers = visibleLockers,
+                onLockerTap = onLockerTap,
+            )
+        } else {
+            AttentionCard(
+                lockers = attentionLockers,
+                onLockerTap = onLockerTap,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LockerSearchCard(
+    lockerSearch: String,
+    onLockerSearchChange: (String) -> Unit,
+) {
+    MinimalCard {
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = lockerSearch,
+            onValueChange = onLockerSearchChange,
+            singleLine = true,
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                )
+            },
+            placeholder = { Text("Search locker, e.g. A04") },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Characters,
+                keyboardType = KeyboardType.Ascii,
+            ),
+            shape = SequoHubShapes.Small,
+        )
+    }
+}
+
+@Composable
+private fun LockerGridCard(
+    lockers: List<LockerUi>,
+    onLockerTap: (LockerUi) -> Unit,
+) {
+    MinimalCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SectionTitle("Locker grid")
+                Text(
+                    text = "Tap a box to inspect package age and status.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            StatusBadge(label = "5x5", tone = BadgeTone.Neutral)
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            lockers.chunked(5).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    row.forEach { locker ->
+                        LockerCell(
+                            modifier = Modifier.weight(1f),
+                            locker = locker,
+                            onClick = { onLockerTap(locker) },
+                        )
+                    }
+                    repeat(5 - row.size) {
+                        Box(modifier = Modifier.weight(1f))
                     }
                 }
             }
-
-            LockerLegend()
         }
 
-        MinimalCard {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SectionTitle("Next priority")
-                    Text(
-                        text = "A04 has a storage fee due before pickup.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
+        LockerLegend()
+    }
+}
+
+@Composable
+private fun AttentionCard(
+    lockers: List<LockerUi>,
+    onLockerTap: (LockerUi) -> Unit,
+) {
+    MinimalCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SectionTitle("Needs attention")
+                Text(
+                    text = "Only lockers with fees, holds, reservations, or maintenance.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            StatusBadge(label = lockers.size.toString(), tone = BadgeTone.Fee)
+        }
+
+        if (lockers.isEmpty()) {
+            Text(
+                text = "No locker needs attention right now.",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                lockers.forEach { locker ->
+                    AttentionLockerRow(
+                        locker = locker,
+                        onClick = { onLockerTap(locker) },
                     )
                 }
-                StatusBadge(label = "Fee due", tone = BadgeTone.Fee)
             }
+        }
+    }
+}
+
+@Composable
+private fun AttentionLockerRow(
+    locker: LockerUi,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = SequoHubShapes.Small,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.64f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    text = "Locker ${locker.id}",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = locker.nextAction,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            StatusBadge(label = locker.state.label, tone = locker.state.badgeTone)
         }
     }
 }
