@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,11 +35,11 @@ import dev.orestegabo.sequohub.core.designsystem.component.AppScroll
 import dev.orestegabo.sequohub.core.designsystem.component.CodeEntryRow
 import dev.orestegabo.sequohub.core.designsystem.component.MinimalCard
 import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
-import dev.orestegabo.sequohub.core.designsystem.component.SelectableChip
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanReceiveScreen(
     onStartCameraScan: () -> Unit,
@@ -76,16 +80,18 @@ fun ScanReceiveScreen(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
-            Row(
+            SingleChoiceSegmentedButtonRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ConditionFlag.entries.forEach { flag ->
-                    SelectableChip(
-                        modifier = Modifier.weight(1f),
-                        label = flag.label,
+                ConditionFlag.entries.forEachIndexed { index, flag ->
+                    SegmentedButton(
                         selected = selectedCondition == flag,
                         onClick = { selectedCondition = flag },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = ConditionFlag.entries.size,
+                        ),
+                        label = { Text(flag.label) },
                     )
                 }
             }
@@ -200,7 +206,7 @@ private fun IntakeAssignment(
     }
 }
 
-private enum class ConditionFlag(val label: String) {
-    SealedOk(label = "sealed_ok"),
-    DamagedOuterPackaging(label = "damaged_outer_packaging"),
+private enum class ConditionFlag(val label: String, val apiValue: String) {
+    SealedOk(label = "Sealed OK", apiValue = "sealed_ok"),
+    DamagedOuterPackaging(label = "Damaged", apiValue = "damaged_outer_packaging"),
 }
