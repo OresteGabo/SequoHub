@@ -13,15 +13,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,13 +57,37 @@ fun HubDashboard(
     lockers: List<LockerUi>,
     onLockerTap: (LockerUi) -> Unit,
 ) {
+    var selectedDashboardTab by remember { mutableIntStateOf(0) }
+    var lockerSearch by remember { mutableStateOf("") }
+    val dashboardTabs = listOf("Grid", "Attention")
+    val visibleLockers = if (lockerSearch.isBlank()) {
+        lockers
+    } else {
+        lockers.filter { it.id.contains(lockerSearch.trim(), ignoreCase = true) }
+    }
+
     AppScroll {
         dev.orestegabo.sequohub.core.designsystem.component.TopHeader(
             eyebrow = "Point de Relai",
             title = "Hub dashboard",
-            subtitle = "Kiyovu Shop 04",
+            subtitle = "Lomé Relay 04",
             status = "Live sync",
         )
+
+        PrimaryTabRow(
+            selectedTabIndex = selectedDashboardTab,
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+        ) {
+            dashboardTabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedDashboardTab == index,
+                    onClick = { selectedDashboardTab = index },
+                    text = { Text(title) },
+                )
+            }
+        }
 
         Row(
             modifier = Modifier
@@ -77,6 +116,25 @@ fun HubDashboard(
         }
 
         MinimalCard {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = lockerSearch,
+                onValueChange = { lockerSearch = it.take(3).uppercase() },
+                singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = null,
+                    )
+                },
+                placeholder = { Text("Search locker, e.g. A04") },
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Characters,
+                    keyboardType = KeyboardType.Ascii,
+                ),
+                shape = SequoHubShapes.Small,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -94,7 +152,7 @@ fun HubDashboard(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                lockers.chunked(5).forEach { row ->
+                visibleLockers.chunked(5).forEach { row ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -137,6 +195,7 @@ fun HubDashboard(
 fun LockerDetailOverlay(
     locker: LockerUi,
     onDismiss: () -> Unit,
+    onReportProblem: (LockerUi) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     Box(modifier = Modifier.fillMaxSize()) {
@@ -189,6 +248,14 @@ fun LockerDetailOverlay(
                     PrimaryActionButton(label = "Collect Fee & Open Locker")
                 } else {
                     PrimaryActionButton(label = locker.primaryAction)
+                }
+
+                OutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onReportProblem(locker) },
+                    shape = SequoHubShapes.Small,
+                ) {
+                    Text("Report problem")
                 }
 
                 OutlinedButton(
