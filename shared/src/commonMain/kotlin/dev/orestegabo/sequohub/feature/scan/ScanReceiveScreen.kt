@@ -37,7 +37,11 @@ import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
 
 @Composable
-fun ScanReceiveScreen() {
+fun ScanReceiveScreen(
+    onStartCameraScan: () -> Unit,
+    onResolveManualCode: (String) -> Unit,
+    onAssignLocker: () -> Unit,
+) {
     var manualCode by rememberSaveable { mutableStateOf("") }
     var selectedCondition by rememberSaveable { mutableStateOf(ConditionFlag.SealedOk) }
 
@@ -49,7 +53,7 @@ fun ScanReceiveScreen() {
             status = "Fast path",
         )
 
-        ScannerLaunchPanel()
+        ScannerLaunchPanel(onStartCameraScan = onStartCameraScan)
 
         MinimalCard {
             Text(
@@ -62,6 +66,7 @@ fun ScanReceiveScreen() {
                 placeholder = "Package ID or QR code",
                 onValueChange = { manualCode = cleanCode(it, max = 22) },
                 buttonLabel = "Resolve",
+                onSubmit = { onResolveManualCode(manualCode) },
             )
         }
 
@@ -84,13 +89,15 @@ fun ScanReceiveScreen() {
                     )
                 }
             }
-            IntakeAssignment()
+            IntakeAssignment(onAssignLocker = onAssignLocker)
         }
     }
 }
 
 @Composable
-private fun ScannerLaunchPanel() {
+private fun ScannerLaunchPanel(
+    onStartCameraScan: () -> Unit,
+) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier
@@ -138,13 +145,16 @@ private fun ScannerLaunchPanel() {
             PrimaryActionButton(
                 modifier = Modifier.width(220.dp),
                 label = "Start camera scan",
+                onClick = onStartCameraScan,
             )
         }
     }
 }
 
 @Composable
-private fun IntakeAssignment() {
+private fun IntakeAssignment(
+    onAssignLocker: () -> Unit,
+) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -184,6 +194,7 @@ private fun IntakeAssignment() {
             PrimaryActionButton(
                 modifier = Modifier.width(116.dp),
                 label = "Assign",
+                onClick = onAssignLocker,
             )
         }
     }
