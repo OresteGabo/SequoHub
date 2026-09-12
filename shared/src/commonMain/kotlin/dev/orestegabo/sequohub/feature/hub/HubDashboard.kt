@@ -408,21 +408,58 @@ private fun LockerCell(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (isMaintenance) {
-                val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+
+                // Draw a clear separating gap and torn edges
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val stroke = 1.5.dp.toPx()
                     val w = size.width
                     val h = size.height
 
-                    // Jagged lightning/fracture crack down the center
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(w * 0.45f, 0f)
-                        lineTo(w * 0.35f, h * 0.35f)
-                        lineTo(w * 0.65f, h * 0.45f)
-                        lineTo(w * 0.3f, h * 0.75f)
-                        lineTo(w * 0.55f, h)
+                    // Left torn edge path
+                    val leftHalfPath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(w * 0.44f, 0f)
+                        lineTo(w * 0.38f, h * 0.25f)
+                        lineTo(w * 0.52f, h * 0.5f)
+                        lineTo(w * 0.35f, h * 0.75f)
+                        lineTo(w * 0.42f, h)
+                        lineTo(0f, h)
+                        close()
                     }
-                    drawPath(path = path, color = lineColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
+
+                    // Right torn edge path (shifted slightly to create the physical gap)
+                    val rightHalfPath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w, 0f)
+                        lineTo(w * 0.56f, 0f)
+                        lineTo(w * 0.50f, h * 0.25f)
+                        lineTo(w * 0.64f, h * 0.5f)
+                        lineTo(w * 0.47f, h * 0.75f)
+                        lineTo(w * 0.54f, h)
+                        lineTo(w, h)
+                        close()
+                    }
+
+                    // Clear out the center gap area by drawing over it or clipping
+                    // For an explicit split look, we draw the torn borders
+                    drawPath(
+                        path = leftHalfPath,
+                        color = backgroundColor
+                    )
+                    drawPath(
+                        path = leftHalfPath,
+                        color = outlineColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                    )
+
+                    drawPath(
+                        path = rightHalfPath,
+                        color = backgroundColor
+                    )
+                    drawPath(
+                        path = rightHalfPath,
+                        color = outlineColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                    )
                 }
 
                 Icon(
