@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,7 +76,10 @@ fun ActivityScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
                         SectionTitle("Notification inbox")
                         Text(
                             text = "Push and in-app alerts for this SequoHub device.",
@@ -83,30 +89,33 @@ fun ActivityScreen(
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         StatusBadge(label = "$unreadCount unread", tone = BadgeTone.New)
-                        TextButton(onClick = onNotificationsRefresh) {
-                            Text("Refresh")
+                        IconButton(onClick = onNotificationsRefresh) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = "Refresh inbox",
+                            )
                         }
                     }
                 }
                 NotificationInboxPanel(
                     messages = notifications,
                     onMarkRead = { message ->
+                        onNotificationRead(message)
                         notifications = notifications.map {
                             if (it.id == message.id) it.copy(isRead = true) else it
                         }
-                        onNotificationRead(message)
                     },
                     onArchive = { message ->
+                        onNotificationArchive(message)
                         notifications = notifications.map {
                             if (it.id == message.id) it.copy(isArchived = true) else it
                         }
-                        onNotificationArchive(message)
                     },
                     onUnarchive = { message ->
+                        onNotificationUnarchive(message)
                         notifications = notifications.map {
                             if (it.id == message.id) it.copy(isArchived = false) else it
                         }
-                        onNotificationUnarchive(message)
                     },
                 )
             }
