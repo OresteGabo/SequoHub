@@ -17,12 +17,8 @@ enum class MainTab(
     val label: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
+    val badgeCount: Int? = null,
 ) {
-    Hub(
-        label = "Hub",
-        selectedIcon = Icons.Filled.GridView,
-        unselectedIcon = Icons.Outlined.GridView,
-    ),
     Scan(
         label = "Scan",
         selectedIcon = Icons.Filled.QrCodeScanner,
@@ -33,10 +29,16 @@ enum class MainTab(
         selectedIcon = Icons.Filled.AssignmentTurnedIn,
         unselectedIcon = Icons.Outlined.AssignmentTurnedIn,
     ),
+    Hub(
+        label = "Hub",
+        selectedIcon = Icons.Filled.GridView,
+        unselectedIcon = Icons.Outlined.GridView,
+    ),
     Activity(
         label = "Audit",
         selectedIcon = Icons.Filled.History,
         unselectedIcon = Icons.Outlined.History,
+        badgeCount = 4,
     ),
     Settings(
         label = "Settings",
