@@ -83,3 +83,31 @@ Suggested contract shape:
 
 Preference values must be scoped to the authenticated user and app family. They must not include secrets,
 raw QR tokens, pickup codes, or private customer data.
+
+## Hub Notification Preferences
+
+`MOBILE_API_GUIDE.md` documents the shared notification device and inbox endpoints, including
+`SEQUO_HUB` as an `appFamily`. The first SequoHub UI can therefore show a push device registration control
+and an in-app inbox.
+
+The API repository also contains notification preference routes, but they are not documented in
+`MOBILE_API_GUIDE.md` yet. Before wiring production networking, sync the guide with the implemented
+controller contract:
+
+Observed API contract:
+
+| Method | Path | Body/query | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/notifications/preferences/{appFamily}/effective` | `eventType` | Read the effective preference for one notification event type. |
+| PUT | `/api/notifications/preferences/{appFamily}` | `eventType`, `pushEnabled`, `inAppEnabled`, `smsEnabled`, `quietHoursStart?`, `quietHoursEnd?` | Save a notification preference for the current user and app family. |
+
+Relevant `SEQUO_HUB` event types:
+
+- `RELAY_PARCEL_DEPOSITED`
+- `RELAY_PICKUP_CODE_CREATED`
+- `RELAY_PARCEL_DELAYED`
+- `RETURN_PIN_CREATED`
+- `DELIVERY_PROBLEM_REPORTED`
+
+Open product decision: the current preference controller is user-level. For a shared shop phone, decide
+whether SequoHub also needs relay-point-level or device-level overrides later.
