@@ -7,13 +7,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -26,14 +23,12 @@ import dev.orestegabo.sequohub.feature.handover.HandoverScreen
 import dev.orestegabo.sequohub.feature.hub.HubDashboard
 import dev.orestegabo.sequohub.feature.hub.LockerDetailOverlay
 import dev.orestegabo.sequohub.feature.hub.sampleLockers
-import dev.orestegabo.sequohub.feature.notifications.NotificationMessageUi
 import dev.orestegabo.sequohub.feature.scan.ScanReceiveScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsUiState
 import dev.orestegabo.sequohub.feature.settings.ThemeMode
 import dev.orestegabo.sequohub.navigation.MainTab
 import dev.orestegabo.sequohub.navigation.SequoBottomNavigation
-import kotlinx.coroutines.launch
 
 @Composable
 @Preview
@@ -61,8 +56,6 @@ private fun SequoHubApp(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
     val lockers = sampleLockers()
     val selectedLocker = lockers.firstOrNull { it.id == selectedLockerId }
 
@@ -78,115 +71,77 @@ private fun SequoHubApp(
             )
             MainTab.Scan -> ScanReceiveScreen(
                 onStartCameraScan = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Camera scan will resolve through POST /api/hub/scan/resolve when the API exists.")
-                    }
+                    missingFeature("Camera scanner")
                 },
                 onResolveManualCode = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/hub/scan/resolve with the typed credential.")
-                    }
+                    missingFeature("Manual code resolution")
                 },
                 onAssignLocker = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/relay/parcels to reserve a free locker.")
-                    }
+                    missingFeature("Locker assignment")
                 },
             )
             MainTab.Handover -> HandoverScreen(
                 onValidatePickup = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/hub/scan/resolve before parcel release.")
-                    }
+                    missingFeature("Pickup validation")
                 },
                 onCollectFeeAndOpen = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/relay/parcels/{parcelId}/release.")
-                    }
+                    missingFeature("Fee collection and locker opening")
                 },
                 onValidateReturn = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for GET /api/returns/{returnId} and 72-hour validation.")
-                    }
+                    missingFeature("Return validation")
                 },
                 onReceiveReturn = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/returns/{returnId}/relay-dropoff.")
-                    }
+                    missingFeature("Return receipt")
                 },
             )
             MainTab.Activity -> ActivityScreen(
                 onNotificationsRefresh = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for GET /api/notifications/inbox?includeArchived=true&limit=20.")
-                    }
+                    missingFeature("Notification inbox refresh")
                 },
-                onNotificationRead = { message ->
-                    showApiSnackbar(
-                        snackbarHostState = snackbarHostState,
-                        message = message,
-                        action = "PATCH /api/notifications/inbox/${message.id}/read",
-                        coroutineScope = coroutineScope,
-                    )
+                onNotificationRead = {
+                    missingFeature("Mark notification as read")
                 },
-                onNotificationArchive = { message ->
-                    showApiSnackbar(
-                        snackbarHostState = snackbarHostState,
-                        message = message,
-                        action = "POST /api/notifications/inbox/${message.id}/archive",
-                        coroutineScope = coroutineScope,
-                    )
+                onNotificationArchive = {
+                    missingFeature("Archive notification")
                 },
-                onNotificationUnarchive = { message ->
-                    showApiSnackbar(
-                        snackbarHostState = snackbarHostState,
-                        message = message,
-                        action = "DELETE /api/notifications/inbox/${message.id}/archive",
-                        coroutineScope = coroutineScope,
-                    )
+                onNotificationUnarchive = {
+                    missingFeature("Restore notification")
                 },
             )
             MainTab.Settings -> SettingsScreen(
                 state = settings,
+                lockers = lockers,
                 onThemeModeChange = { onSettingsChange(settings.copy(themeMode = it)) },
                 onLanguageChange = { onSettingsChange(settings.copy(language = it)) },
                 onQuickScanChange = { onSettingsChange(settings.copy(quickScanOnOpen = it)) },
                 onSoundFeedbackChange = { onSettingsChange(settings.copy(soundFeedback = it)) },
                 onLargeLockerLabelsChange = { onSettingsChange(settings.copy(largeLockerLabels = it)) },
+                onOpeningHoursChange = { onSettingsChange(settings.copy(openingHours = it)) },
+                onCloseTodayChange = { onSettingsChange(settings.copy(closeToday = it)) },
+                onTodayClosingTimeChange = { onSettingsChange(settings.copy(todayClosingTime = it)) },
+                onSaveOpeningHours = {
+                    missingFeature("Hub timetable save")
+                },
                 onRegisterNotifications = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/notifications/devices/fcm with appFamily SEQUO_HUB.")
-                    }
+                    missingFeature("Push notification registration")
                 },
                 onRevokeNotifications = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for DELETE /api/notifications/devices/SEQUO_HUB/{deviceId}.")
-                    }
+                    missingFeature("Push notification revocation")
                 },
                 onOpenNotificationPreferences = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for GET/PUT /api/notifications/preferences/SEQUO_HUB.")
-                    }
+                    missingFeature("Notification preferences")
+                },
+                onMarkLockerUnavailable = { _, _, _ ->
+                    missingFeature("Temporary locker closure")
                 },
                 onLogout = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Logout will be wired to the auth API.")
-                    }
+                    missingFeature("Logout")
                 },
                 onDeleteAccount = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Delete account needs the backend contract in MOBILE_API_TODO.md.")
-                    }
+                    missingFeature("Account deletion")
                 },
             )
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 104.dp, start = 16.dp, end = 16.dp),
-        )
 
         SequoBottomNavigation(
             selectedTab = selectedTab,
@@ -202,22 +157,12 @@ private fun SequoHubApp(
                 locker = locker,
                 onDismiss = { selectedLockerId = null },
                 onReportProblem = {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Ready for POST /api/relay/parcels/{parcelId}/problem.")
-                    }
+                    missingFeature("Relay problem reporting")
                 },
             )
         }
     }
 }
 
-private fun showApiSnackbar(
-    snackbarHostState: SnackbarHostState,
-    message: NotificationMessageUi,
-    action: String,
-    coroutineScope: kotlinx.coroutines.CoroutineScope,
-) {
-    coroutineScope.launch {
-        snackbarHostState.showSnackbar("${message.title}: ready for $action")
-    }
-}
+private fun missingFeature(name: String): Nothing =
+    error("Missing implementation: $name")
