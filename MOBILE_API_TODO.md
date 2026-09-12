@@ -5,6 +5,8 @@ This file tracks SequoHub mobile needs that are not currently documented as read
 
 ## Hub Scan And Short-Code Validation
 
+Status: [x] Added to sequo-api. Implemented as `POST /api/hub/scan/resolve` with hub-scoped resolution and minimal safe display data.
+
 The first SequoHub counter UI needs one simple validation flow for shop staff:
 
 - Scan a QR token, or type a short numeric/package/manifest code.
@@ -36,6 +38,8 @@ details.
 
 ## Hub Home Summary
 
+Status: [x] Added to sequo-api. Implemented as `GET /api/hub/summary?hubId=...`.
+
 The first screen will eventually need a lightweight operational summary without loading an admin dashboard.
 
 Suggested contract shape:
@@ -48,7 +52,7 @@ Useful fields:
 
 - free locker count
 - occupied locker count
-- overdue package count
+- fee due package count
 - pending Sequo collection count
 - open incident count
 - last successful sync timestamp
@@ -57,7 +61,9 @@ Keep this endpoint scoped to the authenticated hub partner and avoid admin-only 
 
 ## Locker Availability Override
 
-SequoHub Settings includes an operator control to temporarily close a locker when it is broken, blocked,
+Status: [x] Added to sequo-api. Implemented as `POST /api/hub/lockers/{lockerId}/availability`.
+
+SequoHub Settings includes an operator control to temporarily close a locker when it is broken,
 jammed, dirty, or otherwise unusable. `MOBILE_API_GUIDE.md` currently documents relay parcel problem reports,
 but it does not document a direct locker availability endpoint.
 
@@ -65,11 +71,11 @@ Suggested contract shape:
 
 | Method | Path | Body | Purpose |
 | --- | --- | --- | --- |
-| POST | `/api/hub/lockers/{lockerId}/availability` | `relayPointId`, `status`, `reason`, `idempotencyKey` | Mark a locker as available, temporarily unavailable, maintenance, or blocked. |
+| POST | `/api/hub/lockers/{lockerId}/availability` | `relayPointId`, `status`, `reason`, `idempotencyKey` | Mark a locker as available, occupied, or maintenance/unavailable. |
 
 Useful fields:
 
-- `status`: `AVAILABLE`, `TEMPORARILY_UNAVAILABLE`, `MAINTENANCE`, `BLOCKED`
+- `status`: `AVAILABLE`, `OCCUPIED`, `MAINTENANCE`
 - `reason`: short enum or note such as `BROKEN_DOOR`, `JAMMED_LOCK`, `DIRTY`, `WRONG_CONTENTS`, `OTHER`
 - `expectedAvailableAt?`: optional estimated recovery time
 - `photoEvidence?`: optional later if the backend supports safe proof upload
@@ -78,6 +84,8 @@ This must be scoped to the authenticated relay point. Shop staff should not be a
 another hub.
 
 ## Hub Opening Hours And Temporary Closures
+
+Status: [x] Added to sequo-api. Implemented as `GET /api/hub/opening-hours` and `PUT /api/hub/opening-hours`.
 
 SequoHub Settings includes editable opening hours so the system can avoid promising pickup/return windows
 when the shop is closed, closed for one day, or closing earlier than usual. `MOBILE_API_GUIDE.md` does not
@@ -102,6 +110,8 @@ planning, and Sequo collection scheduling.
 
 ## Account Deletion
 
+Status: [x] Added to sequo-api. Implemented as `POST /api/account/deletion-requests`; confirmation must be `DELETE_MY_ACCOUNT`.
+
 Settings includes a delete-account entry, but `MOBILE_API_GUIDE.md` currently documents logout and
 session revocation only. Do not wire delete-account UI to a guessed route.
 
@@ -115,6 +125,8 @@ The backend should define whether deletion is immediate, delayed, or support-rev
 clear what happens to audit records that must be retained for hub operations.
 
 ## User Preferences
+
+Status: [x] Added to sequo-api. Implemented as `GET /api/preferences` and `PATCH /api/preferences`, defaulting to `SEQUO_HUB` when `appFamily` is omitted.
 
 Settings includes local theme, language, and counter workflow preferences. These can start as device-local
 settings, but cross-device persistence needs an API contract.
@@ -131,13 +143,13 @@ raw QR tokens, pickup codes, or private customer data.
 
 ## Hub Notification Preferences
 
+Status: [x] Already present in sequo-api and now documented in API `MOBILE_API_GUIDE.md`: `GET /api/notifications/preferences/{appFamily}/effective` and `PUT /api/notifications/preferences/{appFamily}`.
+
 `MOBILE_API_GUIDE.md` documents the shared notification device and inbox endpoints, including
 `SEQUO_HUB` as an `appFamily`. The first SequoHub UI can therefore show a push device registration control
 and an in-app inbox.
 
-The API repository also contains notification preference routes, but they are not documented in
-`MOBILE_API_GUIDE.md` yet. Before wiring production networking, sync the guide with the implemented
-controller contract:
+The API repository contains these notification preference routes and the API-side `MOBILE_API_GUIDE.md` now documents them. SequoHub can wire production networking against this implemented controller contract:
 
 Observed API contract:
 
