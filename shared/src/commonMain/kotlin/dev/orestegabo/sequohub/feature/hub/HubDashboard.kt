@@ -407,27 +407,26 @@ private fun LockerCell(
         border = BorderStroke(1.dp, if (isMaintenance) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else status.border),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Draw corner-to-corner diagonal cross lines for maintenance
             if (isMaintenance) {
-                val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawLine(
-                        color = lineColor,
-                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        end = androidx.compose.ui.geometry.Offset(size.width, size.height),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                    drawLine(
-                        color = lineColor,
-                        start = androidx.compose.ui.geometry.Offset(0f, size.height),
-                        end = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                        strokeWidth = 1.dp.toPx()
-                    )
+                    val stroke = 1.5.dp.toPx()
+                    val w = size.width
+                    val h = size.height
+
+                    // Jagged lightning/fracture crack down the center
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w * 0.45f, 0f)
+                        lineTo(w * 0.35f, h * 0.35f)
+                        lineTo(w * 0.65f, h * 0.45f)
+                        lineTo(w * 0.3f, h * 0.75f)
+                        lineTo(w * 0.55f, h)
+                    }
+                    drawPath(path = path, color = lineColor, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke))
                 }
 
-                // Centered repair tool icon (e.g. Build / Hammer)
                 Icon(
-                    imageVector = Icons.Filled.Build,
+                    imageVector = androidx.compose.material.icons.Icons.Filled.Build,
                     contentDescription = "Under Maintenance",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                     modifier = Modifier
