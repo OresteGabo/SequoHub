@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -410,12 +411,16 @@ private fun LockerCell(
             if (isMaintenance) {
                 val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
 
-                // Draw a clear separating gap and torn edges
-                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                // Draw two separated halves and use BlendMode.Clear to punch a 100% transparent gap
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
+                ) {
                     val w = size.width
                     val h = size.height
 
-                    // Left torn edge path
+                    // Left piece
                     val leftHalfPath = androidx.compose.ui.graphics.Path().apply {
                         moveTo(0f, 0f)
                         lineTo(w * 0.44f, 0f)
@@ -427,7 +432,7 @@ private fun LockerCell(
                         close()
                     }
 
-                    // Right torn edge path (shifted slightly to create the physical gap)
+                    // Right piece (shifted away from the left to create space)
                     val rightHalfPath = androidx.compose.ui.graphics.Path().apply {
                         moveTo(w, 0f)
                         lineTo(w * 0.56f, 0f)
@@ -439,21 +444,41 @@ private fun LockerCell(
                         close()
                     }
 
-                    // Clear out the center gap area by drawing over it or clipping
-                    // For an explicit split look, we draw the torn borders
+                    // Fill background shapes
+                    drawPath(path = leftHalfPath, color = backgroundColor)
+                    drawPath(path = rightHalfPath, color = backgroundColor)
+
+                    // Punch a 100% transparent gap between them
+                    val gapPath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w * 0.44f, 0f)
+                        lineTo(w * 0.56f, 0f)
+                        lineTo(w * 0.47f, h * 0.75f)
+                        lineTo(w * 0.35f, h * 0.75f)
+                        close()
+                    }
+                    // A jagged strip down the middle cleared out entirely
+                    val jaggedGap = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w * 0.42f, 0f)
+                        lineTo(w * 0.58f, 0f)
+                        lineTo(w * 0.54f, h * 0.33f)
+                        lineTo(w * 0.64f, h * 0.66f)
+                        lineTo(w * 0.46f, h)
+                        lineTo(w * 0.38f, h)
+                        lineTo(w * 0.52f, h * 0.66f)
+                        lineTo(w * 0.42f, h * 0.33f)
+                        close()
+                    }
                     drawPath(
-                        path = leftHalfPath,
-                        color = backgroundColor
+                        path = jaggedGap,
+                        color = androidx.compose.ui.graphics.Color.Transparent,
+                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear
                     )
+
+                    // Draw clean torn borders along the split
                     drawPath(
                         path = leftHalfPath,
                         color = outlineColor,
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
-                    )
-
-                    drawPath(
-                        path = rightHalfPath,
-                        color = backgroundColor
                     )
                     drawPath(
                         path = rightHalfPath,
