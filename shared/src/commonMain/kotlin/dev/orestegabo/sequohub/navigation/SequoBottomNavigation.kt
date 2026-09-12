@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -110,14 +112,24 @@ private fun BottomNavItem(
                 modifier = Modifier
                     .clip(SequoHubShapes.IconCapsule)
                     .background(if (selected) colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
-                    .padding(8.dp),
+                    .padding(if (tab == MainTab.Hub) 10.dp else 8.dp),
             ) {
-                Icon(
-                    imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                    contentDescription = tab.label,
-                    tint = contentColor,
-                    modifier = Modifier.size(20.dp),
-                )
+                BadgedBox(
+                    badge = {
+                        tab.badgeCount?.let { count ->
+                            Badge {
+                                Text(count.toString())
+                            }
+                        }
+                    },
+                ) {
+                    Icon(
+                        imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
+                        contentDescription = tab.label,
+                        tint = contentColor,
+                        modifier = Modifier.size(if (tab == MainTab.Hub) 24.dp else 20.dp),
+                    )
+                }
             }
             Text(
                 text = tab.label,
