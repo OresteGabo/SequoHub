@@ -140,8 +140,8 @@ private fun AuditTimeline() {
         )
         ActivityItem(
             time = "08:55",
-            title = "Support hold",
-            subtitle = "D02 blocked after damaged packaging report",
+            title = "Manager review",
+            subtitle = "D02 paused after damaged packaging report",
             tone = BadgeTone.Hold,
         )
         ActivityItem(
