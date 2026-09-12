@@ -1,0 +1,12 @@
+package dev.orestegabo.sequohub.core.designsystem.component
+
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
+
+object SequoHubShapes {
+    val Small = RoundedCornerShape(8.dp)
+    val Card = RoundedCornerShape(8.dp)
+    val NavContainer = RoundedCornerShape(26.dp)
+    val NavItem = RoundedCornerShape(20.dp)
+    val IconCapsule = RoundedCornerShape(14.dp)
+}
