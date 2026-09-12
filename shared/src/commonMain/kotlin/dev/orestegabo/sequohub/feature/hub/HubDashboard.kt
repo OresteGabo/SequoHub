@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +51,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.BadgeTone
 import dev.orestegabo.sequohub.core.designsystem.component.DetailRow
 import dev.orestegabo.sequohub.core.designsystem.component.MetricCard
 import dev.orestegabo.sequohub.core.designsystem.component.MinimalCard
+import dev.orestegabo.sequohub.core.designsystem.component.Package2
 import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
 import dev.orestegabo.sequohub.core.designsystem.component.SectionTitle
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
@@ -376,7 +376,6 @@ fun LockerDetailOverlay(
         }
     }
 }
-
 @Composable
 private fun LockerCell(
     modifier: Modifier,
@@ -385,6 +384,7 @@ private fun LockerCell(
 ) {
     val status = locker.state.statusColors(MaterialTheme.colorScheme)
     val isMaintenance = locker.state == LockerState.Maintenance
+    val isOccupied = locker.state == LockerState.Occupied
 
     val backgroundColor = if (isMaintenance) {
         MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
@@ -409,91 +409,42 @@ private fun LockerCell(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (isMaintenance) {
-                val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
-
-                // Draw two separated halves and use BlendMode.Clear to punch a 100% transparent gap
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
-                ) {
-                    val w = size.width
-                    val h = size.height
-
-                    // Left piece
-                    val leftHalfPath = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(0f, 0f)
-                        lineTo(w * 0.44f, 0f)
-                        lineTo(w * 0.38f, h * 0.25f)
-                        lineTo(w * 0.52f, h * 0.5f)
-                        lineTo(w * 0.35f, h * 0.75f)
-                        lineTo(w * 0.42f, h)
-                        lineTo(0f, h)
-                        close()
-                    }
-
-                    // Right piece (shifted away from the left to create space)
-                    val rightHalfPath = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(w, 0f)
-                        lineTo(w * 0.56f, 0f)
-                        lineTo(w * 0.50f, h * 0.25f)
-                        lineTo(w * 0.64f, h * 0.5f)
-                        lineTo(w * 0.47f, h * 0.75f)
-                        lineTo(w * 0.54f, h)
-                        lineTo(w, h)
-                        close()
-                    }
-
-                    // Fill background shapes
-                    drawPath(path = leftHalfPath, color = backgroundColor)
-                    drawPath(path = rightHalfPath, color = backgroundColor)
-
-                    // Punch a 100% transparent gap between them
-                    val gapPath = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(w * 0.44f, 0f)
-                        lineTo(w * 0.56f, 0f)
-                        lineTo(w * 0.47f, h * 0.75f)
-                        lineTo(w * 0.35f, h * 0.75f)
-                        close()
-                    }
-                    // A jagged strip down the middle cleared out entirely
-                    val jaggedGap = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(w * 0.42f, 0f)
-                        lineTo(w * 0.58f, 0f)
-                        lineTo(w * 0.54f, h * 0.33f)
-                        lineTo(w * 0.64f, h * 0.66f)
-                        lineTo(w * 0.46f, h)
-                        lineTo(w * 0.38f, h)
-                        lineTo(w * 0.52f, h * 0.66f)
-                        lineTo(w * 0.42f, h * 0.33f)
-                        close()
-                    }
-                    drawPath(
-                        path = jaggedGap,
-                        color = androidx.compose.ui.graphics.Color.Transparent,
-                        blendMode = androidx.compose.ui.graphics.BlendMode.Clear
+                val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawLine(
+                        color = lineColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                        strokeWidth = 1.dp.toPx()
                     )
-
-                    // Draw clean torn borders along the split
-                    drawPath(
-                        path = leftHalfPath,
-                        color = outlineColor,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
-                    )
-                    drawPath(
-                        path = rightHalfPath,
-                        color = outlineColor,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                    drawLine(
+                        color = lineColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, size.height),
+                        end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                        strokeWidth = 1.dp.toPx()
                     )
                 }
 
                 Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Filled.Build,
+                    imageVector = Icons.Filled.Build,
                     contentDescription = "Under Maintenance",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                     modifier = Modifier
                         .align(Alignment.Center)
                         .size(20.dp),
+                )
+            }
+
+            // Bottom-right watermark package icon for occupied state
+            if (isOccupied && !isMaintenance) {
+                Icon(
+                    imageVector = Icons.Filled.Package2,
+                    contentDescription = null,
+                    tint = status.text.copy(alpha = 0.18f),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 4.dp, bottom = 4.dp)
+                        .size(28.dp),
                 )
             }
 
@@ -509,6 +460,7 @@ private fun LockerCell(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                 )
+
                 Text(
                     text = locker.state.shortLabel,
                     color = contentColor.copy(alpha = if (isMaintenance) 0.6f else 0.82f),
@@ -590,6 +542,6 @@ private val LockerState.badgeTone: BadgeTone
 private val LockerState.icon: ImageVector
     get() = when (this) {
         LockerState.Free -> Icons.Filled.CheckCircle
-        LockerState.Occupied -> Icons.Filled.Inventory2
+        LockerState.Occupied -> Icons.Filled.Package2
         LockerState.Maintenance -> Icons.Filled.Close
     }
