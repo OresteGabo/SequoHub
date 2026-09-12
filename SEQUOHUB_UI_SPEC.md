@@ -84,7 +84,8 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Material primary tabs for Grid and Attention views.
 - Locker search field for direct A01-E05 lookup.
 - Metric row: occupied lockers, fees due today, pending Sequo collections.
-- Locker grid: 25 stable cells from `A01` to `E05`.
+- Grid tab: 25 stable cells from `A01` to `E05`.
+- Attention tab: focused locker action queue for overdue, blocked, maintenance, and reserved lockers.
 - Bottom sheet: opens on locker tap, showing locker state, package age, reference, next action, and fee notice when relevant.
 - Locker problem action maps to `POST /api/relay/parcels/{parcelId}/problem`.
 
@@ -100,7 +101,7 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 
 - Full-screen scanner surface with centered square guide.
 - Manual fallback text field for package IDs or QR codes.
-- Condition flags:
+- Material single-choice segmented control for condition flags:
   - `sealed_ok`
   - `damaged_outer_packaging`
 - Best-free-locker assignment panel for one-tap intake.
@@ -115,6 +116,8 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
   - theme and large-label appearance
   - language: French, English, and Éwé/Mina for Lomé/Togo context
   - counter workflow preferences
+  - locker controls for temporarily closing broken or unusable lockers
+  - editable opening hours for usual weekly timetable and one-day closure changes
   - notification device controls for `SEQUO_HUB` push registration and revocation
   - notification channel preferences for push, in-app, SMS, and quiet hours
   - support and privacy
@@ -124,6 +127,7 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 ### Activity And Notification Inbox
 
 - Activity uses tabs for local audit events and in-app notifications.
+- Unread notifications use a subtle highlighted row background, matching familiar email inbox behavior.
 - The inbox maps to the documented notification endpoints:
   - read inbox: `GET /api/notifications/inbox`
   - mark read: `PATCH /api/notifications/inbox/{messageId}/read`
@@ -146,6 +150,8 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Return receipt maps to `POST /api/returns/{returnId}/relay-dropoff`.
 - Admin-only storage-fee assessment, return-to-seller closure, and operational monitoring endpoints are
   represented as read-only status/fee states in the UI, not exposed as shop-counter actions.
+- Temporary locker closure is tracked in `MOBILE_API_TODO.md` until a locker availability endpoint is documented.
+- Opening hours and closure exceptions are tracked in `MOBILE_API_TODO.md` until a hub timetable endpoint is documented.
 
 ## Material Components In Use
 
@@ -155,7 +161,7 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Dialogs: logout and account deletion confirmations.
 - Dividers: settings sections and hub search separation.
 - Search: locker lookup by locker ID.
-- Snackbars: action feedback before backend wiring exists.
+- Segmented buttons: scan condition and mutually exclusive mode choices.
 - Tabs: Hub dashboard modes.
 - Sheets: locker detail bottom sheet.
 
