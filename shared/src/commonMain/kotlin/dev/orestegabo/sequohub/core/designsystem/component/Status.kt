@@ -25,30 +25,15 @@ fun LockerState.statusColors(colorScheme: ColorScheme): StatusColors =
             text = colorScheme.onPrimaryContainer,
             border = colorScheme.primary.copy(alpha = 0.28f),
         )
-        LockerState.Reserved -> StatusColors(
-            background = colorScheme.secondaryContainer.copy(alpha = 0.72f),
-            text = colorScheme.onSecondaryContainer,
-            border = colorScheme.secondary.copy(alpha = 0.28f),
-        )
         LockerState.Occupied -> StatusColors(
             background = colorScheme.tertiaryContainer.copy(alpha = 0.72f),
             text = colorScheme.onTertiaryContainer,
             border = colorScheme.tertiary.copy(alpha = 0.28f),
         )
-        LockerState.Overdue -> StatusColors(
-            background = colorScheme.tertiaryContainer.copy(alpha = 0.72f),
-            text = colorScheme.onTertiaryContainer,
-            border = colorScheme.tertiary.copy(alpha = 0.32f),
-        )
-        LockerState.Blocked -> StatusColors(
-            background = colorScheme.errorContainer.copy(alpha = 0.72f),
-            text = colorScheme.onErrorContainer,
-            border = colorScheme.error.copy(alpha = 0.32f),
-        )
         LockerState.Maintenance -> StatusColors(
-            background = colorScheme.surfaceContainerHigh,
-            text = colorScheme.onSurfaceVariant,
-            border = colorScheme.outlineVariant,
+            background = colorScheme.errorContainer.copy(alpha = 0.34f),
+            text = colorScheme.error,
+            border = colorScheme.error.copy(alpha = 0.54f),
         )
     }
 
