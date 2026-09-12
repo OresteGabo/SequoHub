@@ -13,8 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.orestegabo.sequohub.core.designsystem.component.AppScroll
@@ -48,8 +55,10 @@ import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
 import dev.orestegabo.sequohub.core.designsystem.component.SectionTitle
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
+import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.statusColors
 import dev.orestegabo.sequohub.feature.handover.FeeNotice
+import kotlin.text.uppercase
 
 @Composable
 fun HubDashboard(
@@ -67,7 +76,7 @@ fun HubDashboard(
     val attentionLockers = visibleLockers.filter { it.needsAttention }
 
     AppScroll {
-        dev.orestegabo.sequohub.core.designsystem.component.TopHeader(
+        TopHeader(
             eyebrow = "Point de Relai",
             title = "Hub dashboard",
             subtitle = "Lomé Relay 04",
@@ -221,7 +230,7 @@ private fun AttentionCard(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 SectionTitle("Needs attention")
                 Text(
-                    text = "Only lockers with fees, holds, reservations, or maintenance.",
+                    text = "Maintenance lockers and occupied lockers with fee due.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -374,6 +383,19 @@ private fun LockerCell(
     onClick: () -> Unit,
 ) {
     val status = locker.state.statusColors(MaterialTheme.colorScheme)
+    val isMaintenance = locker.state == LockerState.Maintenance
+
+    val backgroundColor = if (isMaintenance) {
+        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+    } else {
+        status.background
+    }
+
+    val contentColor = if (isMaintenance) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    } else {
+        status.text
+    }
 
     Surface(
         modifier = modifier
@@ -381,26 +403,59 @@ private fun LockerCell(
             .clip(SequoHubShapes.Small)
             .clickable(onClick = onClick),
         shape = SequoHubShapes.Small,
-        color = status.background,
-        border = BorderStroke(1.dp, status.border),
+        color = backgroundColor,
+        border = BorderStroke(1.dp, if (isMaintenance) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else status.border),
     ) {
-        Column(
-            modifier = Modifier.padding(7.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = locker.id,
-                color = status.text,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = locker.state.shortLabel,
-                color = status.text.copy(alpha = 0.82f),
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Draw corner-to-corner diagonal cross lines for maintenance
+            if (isMaintenance) {
+                val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawLine(
+                        color = lineColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    drawLine(
+                        color = lineColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, size.height),
+                        end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+
+                // Centered repair tool icon (e.g. Build / Hammer)
+                Icon(
+                    imageVector = Icons.Filled.Build,
+                    contentDescription = "Under Maintenance",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(20.dp),
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(7.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = locker.id,
+                    color = contentColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = locker.state.shortLabel,
+                    color = contentColor.copy(alpha = if (isMaintenance) 0.6f else 0.82f),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -439,12 +494,21 @@ private fun LegendItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(status.background, SequoHubShapes.Small)
-                .border(1.dp, status.border, SequoHubShapes.Small),
-        )
+        Surface(
+            modifier = Modifier.size(20.dp),
+            shape = SequoHubShapes.Small,
+            color = status.background,
+            border = BorderStroke(1.dp, status.border),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = state.icon,
+                    contentDescription = null,
+                    tint = status.text,
+                    modifier = Modifier.size(13.dp),
+                )
+            }
+        }
         Text(
             text = state.label,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -458,9 +522,13 @@ private fun LegendItem(
 private val LockerState.badgeTone: BadgeTone
     get() = when (this) {
         LockerState.Free -> BadgeTone.Neutral
-        LockerState.Reserved -> BadgeTone.New
         LockerState.Occupied -> BadgeTone.Active
-        LockerState.Overdue -> BadgeTone.Fee
-        LockerState.Blocked -> BadgeTone.Hold
-        LockerState.Maintenance -> BadgeTone.Neutral
+        LockerState.Maintenance -> BadgeTone.Hold
+    }
+
+private val LockerState.icon: ImageVector
+    get() = when (this) {
+        LockerState.Free -> Icons.Filled.CheckCircle
+        LockerState.Occupied -> Icons.Filled.Inventory2
+        LockerState.Maintenance -> Icons.Filled.Close
     }
