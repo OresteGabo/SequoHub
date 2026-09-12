@@ -6,7 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,12 +28,12 @@ import dev.orestegabo.sequohub.core.designsystem.component.CodeEntryRow
 import dev.orestegabo.sequohub.core.designsystem.component.DetailRow
 import dev.orestegabo.sequohub.core.designsystem.component.MinimalCard
 import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
-import dev.orestegabo.sequohub.core.designsystem.component.SelectableChip
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HandoverScreen(
     onValidatePickup: (String) -> Unit,
@@ -48,21 +52,23 @@ fun HandoverScreen(
             status = "ID required",
         )
 
-        Row(
+        SingleChoiceSegmentedButtonRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            HandoverMode.entries.forEach { item ->
-                SelectableChip(
-                    modifier = Modifier.weight(1f),
-                    label = item.label,
+            HandoverMode.entries.forEachIndexed { index, item ->
+                SegmentedButton(
                     selected = item == mode,
                     onClick = {
                         mode = item
                         code = ""
                     },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = HandoverMode.entries.size,
+                    ),
+                    label = { Text(item.label) },
                 )
             }
         }
