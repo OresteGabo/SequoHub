@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalShipping
@@ -76,65 +77,76 @@ private fun NotificationMessageRow(
     onUnarchive: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Row(
+    Surface(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top,
+            .fillMaxWidth(),
+        color = if (message.isRead) {
+            colorScheme.surface
+        } else {
+            colorScheme.primaryContainer.copy(alpha = 0.22f)
+        },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
     ) {
-        Icon(
-            imageVector = message.type.icon,
-            contentDescription = null,
-            tint = if (message.isRead) colorScheme.onSurfaceVariant else colorScheme.primary,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = message.title,
-                    color = colorScheme.onSurface,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (message.isRead) FontWeight.Medium else FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    text = message.time,
-                    color = colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(start = 10.dp),
-                )
-            }
-            Text(
-                text = message.body,
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            Icon(
+                imageVector = message.type.icon,
+                contentDescription = null,
+                tint = if (message.isRead) colorScheme.onSurfaceVariant else colorScheme.primary,
+                modifier = Modifier.padding(top = 2.dp),
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
-                StatusBadge(label = if (message.isRead) message.type.label else "New", tone = message.type.tone)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (!message.isRead) {
-                        TextButton(onClick = onMarkRead) {
-                            Text("Mark read")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = message.title,
+                        color = colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (message.isRead) FontWeight.Medium else FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = message.time,
+                        color = colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(start = 10.dp),
+                    )
+                }
+                Text(
+                    text = message.body,
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    StatusBadge(label = if (message.isRead) message.type.label else "New", tone = message.type.tone)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (!message.isRead) {
+                            TextButton(onClick = onMarkRead) {
+                                Text("Mark read")
+                            }
                         }
-                    }
-                    TextButton(onClick = if (message.isArchived) onUnarchive else onArchive) {
-                        Text(if (message.isArchived) "Restore" else "Archive")
+                        TextButton(onClick = if (message.isArchived) onUnarchive else onArchive) {
+                            Text(if (message.isArchived) "Restore" else "Archive")
+                        }
                     }
                 }
             }
