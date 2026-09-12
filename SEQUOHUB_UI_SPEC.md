@@ -55,12 +55,9 @@ theme adapter while leaving feature UI untouched.
 
 | Status | Intent |
 | --- | --- |
-| Free | Soft green, indicates locker can be assigned. |
-| Reserved | Soft indigo, intake is in progress. |
-| Occupied | Soft blue, package is stored. |
-| Overdue / Fee due | Soft amber, fee must be collected before release. |
-| Blocked / Support hold | Soft red, standard workflow must stop. |
-| Maintenance | Neutral gray, locker unavailable. |
+| Free | Faint check background, locker can be assigned. |
+| Occupied | Faint package background, package is stored. |
+| Maintenance | Faint cross background plus visible cross, locker unavailable for repair. |
 
 ## Typography Scale
 
@@ -85,7 +82,8 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Locker search field for direct A01-E05 lookup.
 - Metric row: occupied lockers, fees due today, pending Sequo collections.
 - Grid tab: 25 stable cells from `A01` to `E05`.
-- Attention tab: focused locker action queue for overdue, blocked, maintenance, and reserved lockers.
+- Locker cells use large, faint state imagery and clear symbols so staff can identify state without relying on color.
+- Attention tab: focused locker action queue for maintenance lockers and occupied lockers with fee due.
 - Bottom sheet: opens on locker tap, showing locker state, package age, reference, next action, and fee notice when relevant.
 - Locker problem action maps to `POST /api/relay/parcels/{parcelId}/problem`.
 
