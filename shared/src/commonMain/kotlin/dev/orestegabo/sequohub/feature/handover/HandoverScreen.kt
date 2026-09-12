@@ -31,7 +31,12 @@ import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
 
 @Composable
-fun HandoverScreen() {
+fun HandoverScreen(
+    onValidatePickup: (String) -> Unit,
+    onCollectFeeAndOpen: () -> Unit,
+    onValidateReturn: (String) -> Unit,
+    onReceiveReturn: () -> Unit,
+) {
     var mode by rememberSaveable { mutableStateOf(HandoverMode.Pickup) }
     var code by rememberSaveable { mutableStateOf("") }
 
@@ -73,13 +78,20 @@ fun HandoverScreen() {
                 placeholder = if (mode == HandoverMode.Pickup) "Pickup code" else "Return code",
                 onValueChange = { code = cleanCode(it, max = 18) },
                 buttonLabel = "Validate",
+                onSubmit = {
+                    if (mode == HandoverMode.Pickup) {
+                        onValidatePickup(code)
+                    } else {
+                        onValidateReturn(code)
+                    }
+                },
             )
         }
 
         if (mode == HandoverMode.Pickup) {
-            PickupFeeModal()
+            PickupFeeModal(onCollectFeeAndOpen = onCollectFeeAndOpen)
         } else {
-            ReturnValidationCard()
+            ReturnValidationCard(onReceiveReturn = onReceiveReturn)
         }
     }
 }
@@ -121,7 +133,9 @@ fun FeeNotice(amount: Int) {
 }
 
 @Composable
-private fun PickupFeeModal() {
+private fun PickupFeeModal(
+    onCollectFeeAndOpen: () -> Unit,
+) {
     MinimalCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -148,12 +162,14 @@ private fun PickupFeeModal() {
         DetailRow(label = "Source", value = "Backend storage rules")
 
         FeeNotice(amount = 1000)
-        PrimaryActionButton(label = "Collect Fee & Open Locker")
+        PrimaryActionButton(label = "Collect Fee & Open Locker", onClick = onCollectFeeAndOpen)
     }
 }
 
 @Composable
-private fun ReturnValidationCard() {
+private fun ReturnValidationCard(
+    onReceiveReturn: () -> Unit,
+) {
     MinimalCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -177,7 +193,7 @@ private fun ReturnValidationCard() {
 
         DetailRow(label = "ID check", value = "Required before intake")
         DetailRow(label = "Refund decision", value = "Sequo final validation only")
-        PrimaryActionButton(label = "Receive Return")
+        PrimaryActionButton(label = "Receive Return", onClick = onReceiveReturn)
     }
 }
 
