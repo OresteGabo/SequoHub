@@ -23,12 +23,19 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,9 +59,15 @@ fun SettingsScreen(
     onQuickScanChange: (Boolean) -> Unit,
     onSoundFeedbackChange: (Boolean) -> Unit,
     onLargeLockerLabelsChange: (Boolean) -> Unit,
+    onRegisterNotifications: () -> Unit,
+    onRevokeNotifications: () -> Unit,
+    onOpenNotificationPreferences: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
 ) {
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     AppScroll {
         TopHeader(
             eyebrow = "Settings",
@@ -150,6 +163,32 @@ fun SettingsScreen(
             )
         }
 
+        SettingsSection(title = "Notifications") {
+            SettingsRow(
+                icon = Icons.Filled.Notifications,
+                title = "Push alerts",
+                subtitle = "Register this phone for hub pickup, return, and collection alerts.",
+                trailingText = "SEQUO_HUB",
+                onClick = onRegisterNotifications,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
+            SettingsRow(
+                icon = Icons.Filled.Notifications,
+                title = "Notification channels",
+                subtitle = "Push, in-app, SMS, and quiet hours for hub events.",
+                showChevron = true,
+                onClick = onOpenNotificationPreferences,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
+            SettingsRow(
+                icon = Icons.Filled.Notifications,
+                title = "Stop alerts on this phone",
+                subtitle = "Revoke this device when it is no longer used at the counter.",
+                tone = SettingsRowTone.Danger,
+                onClick = onRevokeNotifications,
+            )
+        }
+
         SettingsSection(title = "Support and privacy") {
             SettingsRow(
                 icon = Icons.Filled.Policy,
@@ -171,16 +210,63 @@ fun SettingsScreen(
                 title = "Logout",
                 subtitle = "End this staff session on the device.",
                 tone = SettingsRowTone.Primary,
-                onClick = onLogout,
+                onClick = { showLogoutDialog = true },
             )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
             SettingsRow(
                 icon = Icons.Filled.DeleteForever,
                 title = "Delete account",
                 subtitle = "Requires a backend account deletion workflow.",
                 tone = SettingsRowTone.Danger,
-                onClick = onDeleteAccount,
+                onClick = { showDeleteDialog = true },
             )
         }
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Logout?") },
+            text = { Text("This will end the staff session on this device once auth logout is connected.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                ) {
+                    Text("Logout")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete account?") },
+            text = { Text("Account deletion needs a backend review flow because hub audit records may need to be retained.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDeleteAccount()
+                    },
+                ) {
+                    Text("Request deletion", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 
