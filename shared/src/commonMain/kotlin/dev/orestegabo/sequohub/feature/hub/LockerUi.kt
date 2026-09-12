@@ -23,6 +23,14 @@ data class LockerUi(
     val primaryAction: String,
 )
 
+val LockerUi.needsAttention: Boolean
+    get() = state in setOf(
+        LockerState.Reserved,
+        LockerState.Overdue,
+        LockerState.Blocked,
+        LockerState.Maintenance,
+    )
+
 fun sampleLockers(): List<LockerUi> {
     val states = listOf(
         LockerState.Occupied,
