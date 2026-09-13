@@ -9,6 +9,14 @@ enum class LockerState(
     Maintenance(label = "Maintenance", shortLabel = "Closed"),
 }
 
+enum class LockerSyncState(
+    val label: String,
+) {
+    Synced(label = "Synced"),
+    Pending(label = "Pending sync"),
+    Failed(label = "Sync failed"),
+}
+
 data class LockerUi(
     val id: String,
     val state: LockerState,
@@ -18,10 +26,11 @@ data class LockerUi(
     val nextAction: String,
     val feeDueCfa: Int,
     val primaryAction: String,
+    val syncState: LockerSyncState,
 )
 
 val LockerUi.needsAttention: Boolean
-    get() = state == LockerState.Maintenance || feeDueCfa > 0
+    get() = state == LockerState.Maintenance || feeDueCfa > 0 || syncState != LockerSyncState.Synced
 
 fun sampleLockers(): List<LockerUi> {
     val states = listOf(
@@ -57,6 +66,11 @@ fun sampleLockers(): List<LockerUi> {
             val id = "$row${column.toString().padStart(2, '0')}"
             val state = states[rowIndex * 5 + column - 1]
             val hasFeeDue = id in setOf("A04", "D01", "E03")
+            val syncState = when (id) {
+                "B03", "D01" -> LockerSyncState.Pending
+                "C04" -> LockerSyncState.Failed
+                else -> LockerSyncState.Synced
+            }
             LockerUi(
                 id = id,
                 state = state,
@@ -78,6 +92,7 @@ fun sampleLockers(): List<LockerUi> {
                     LockerState.Maintenance -> "View Maintenance"
                     LockerState.Occupied -> "Validate Pickup"
                 },
+                syncState = syncState,
             )
         }
     }
