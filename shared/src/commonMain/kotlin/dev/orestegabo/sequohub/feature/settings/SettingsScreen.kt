@@ -57,6 +57,8 @@ import dev.orestegabo.sequohub.core.designsystem.component.SelectableChip
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
+import dev.orestegabo.sequohub.core.localization.SequoStrings
 import dev.orestegabo.sequohub.feature.hub.LockerUi
 
 @Composable
@@ -82,6 +84,7 @@ fun SettingsScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf(SettingsPage.Main) }
+    val strings = LocalSequoStrings.current
 
     when (page) {
         SettingsPage.Main -> SettingsMainPage(
@@ -117,8 +120,8 @@ fun SettingsScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Logout?") },
-            text = { Text("This will end the staff session on this device.") },
+            title = { Text(strings.logoutQuestion) },
+            text = { Text(strings.logoutDialogText) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -126,12 +129,12 @@ fun SettingsScreen(
                         onLogout()
                     },
                 ) {
-                    Text("Logout")
+                    Text(strings.logout)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             },
         )
@@ -140,8 +143,8 @@ fun SettingsScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete account?") },
-            text = { Text("This requests removal of the staff profile from SequoHub. Hub audit records may be retained for operations history.") },
+            title = { Text(strings.deleteAccountQuestion) },
+            text = { Text(strings.deleteDialogText) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -149,12 +152,12 @@ fun SettingsScreen(
                         onDeleteAccount()
                     },
                 ) {
-                    Text("Request deletion", color = MaterialTheme.colorScheme.error)
+                    Text(strings.requestDeletion, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(strings.cancel)
                 }
             },
         )
@@ -177,19 +180,20 @@ private fun SettingsMainPage(
     onLogoutClick: () -> Unit,
     onDeleteAccountClick: () -> Unit,
 ) {
+    val strings = LocalSequoStrings.current
     AppScroll {
         TopHeader(
-            eyebrow = "Settings",
-            title = "Hub settings",
-            subtitle = "Account, language, appearance, and counter flow",
-            status = "Local",
+            eyebrow = strings.settings,
+            title = strings.hubSettings,
+            subtitle = strings.settingsSubtitle,
+            status = strings.local,
         )
 
         OperatorCard(state = state)
 
-        SettingsSection(title = "Appearance") {
+        SettingsSection(title = strings.appearance) {
             Text(
-                text = "Theme",
+                text = strings.theme,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleSmall,
             )
@@ -200,7 +204,7 @@ private fun SettingsMainPage(
                 ThemeMode.entries.forEach { mode ->
                     SelectableChip(
                         modifier = Modifier.weight(1f),
-                        label = mode.label,
+                        label = mode.localizedLabel(strings),
                         selected = state.themeMode == mode,
                         onClick = { onThemeModeChange(mode) },
                     )
@@ -208,8 +212,8 @@ private fun SettingsMainPage(
             }
             SettingsRow(
                 icon = Icons.Filled.TextFields,
-                title = "Large locker labels",
-                subtitle = "Bigger A01-E05 labels for busy counters.",
+                title = strings.largeLockerLabels,
+                subtitle = strings.largeLockerLabelsHint,
                 trailing = {
                     Switch(
                         checked = state.largeLockerLabels,
@@ -219,7 +223,7 @@ private fun SettingsMainPage(
             )
         }
 
-        SettingsSection(title = "Language") {
+        SettingsSection(title = strings.language) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -235,17 +239,17 @@ private fun SettingsMainPage(
             }
             SettingsRow(
                 icon = Icons.Filled.Language,
-                title = "Display language",
+                title = strings.displayLanguage,
                 subtitle = state.language.label,
                 trailingText = state.language.code,
             )
         }
 
-        SettingsSection(title = "Counter workflow") {
+        SettingsSection(title = strings.counterWorkflow) {
             SettingsRow(
                 icon = Icons.Filled.QrCodeScanner,
-                title = "Quick scan on open",
-                subtitle = "Start from the fastest scan-first intake flow.",
+                title = strings.quickScanOnOpen,
+                subtitle = strings.quickScanOnOpenHint,
                 trailing = {
                     Switch(
                         checked = state.quickScanOnOpen,
@@ -255,8 +259,8 @@ private fun SettingsMainPage(
             )
             SettingsRow(
                 icon = Icons.AutoMirrored.Filled.VolumeUp,
-                title = "Sound feedback",
-                subtitle = "Play soft confirmations after validation.",
+                title = strings.soundFeedback,
+                subtitle = strings.soundFeedbackHint,
                 trailing = {
                     Switch(
                         checked = state.soundFeedback,
@@ -266,84 +270,84 @@ private fun SettingsMainPage(
             )
             SettingsRow(
                 icon = Icons.Filled.Notifications,
-                title = "Operational alerts",
-                subtitle = "Fee reminders, maintenance, and collection alerts.",
-                trailingText = "On",
+                title = strings.operationalAlerts,
+                subtitle = strings.operationalAlertsHint,
+                trailingText = strings.on,
             )
         }
 
-        SettingsSection(title = "Locker controls") {
+        SettingsSection(title = strings.lockerControls) {
             SettingsRow(
                 icon = Icons.Filled.Lock,
-                title = "Temporarily close a locker",
-                subtitle = "Mark a broken or unusable locker as unavailable.",
+                title = strings.temporarilyCloseLocker,
+                subtitle = strings.temporarilyCloseLockerHint,
                 showChevron = true,
                 onClick = onOpenLockerClosure,
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
             SettingsRow(
                 icon = Icons.Filled.CalendarMonth,
-                title = "Opening hours",
-                subtitle = openingHoursSummary(state),
+                title = strings.openingHours,
+                subtitle = openingHoursSummary(state, strings),
                 showChevron = true,
                 onClick = onOpenOpeningHours,
             )
         }
 
-        SettingsSection(title = "Notifications") {
+        SettingsSection(title = strings.notifications) {
             SettingsRow(
                 icon = Icons.Filled.Notifications,
-                title = "Push alerts",
-                subtitle = "Register this phone for hub pickup, return, and collection alerts.",
-                trailingText = "On",
+                title = strings.pushAlerts,
+                subtitle = strings.pushAlertsHint,
+                trailingText = strings.on,
                 onClick = onRegisterNotifications,
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
             SettingsRow(
                 icon = Icons.Filled.Notifications,
-                title = "Notification channels",
-                subtitle = "Push, in-app, SMS, and quiet hours for hub events.",
+                title = strings.notificationChannels,
+                subtitle = strings.notificationChannelsHint,
                 showChevron = true,
                 onClick = onOpenNotificationPreferences,
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
             SettingsRow(
                 icon = Icons.Filled.Notifications,
-                title = "Stop alerts on this phone",
-                subtitle = "Revoke this device when it is no longer used at the counter.",
+                title = strings.stopAlerts,
+                subtitle = strings.stopAlertsHint,
                 tone = SettingsRowTone.Danger,
                 onClick = onRevokeNotifications,
             )
         }
 
-        SettingsSection(title = "Support and privacy") {
+        SettingsSection(title = strings.supportPrivacy) {
             SettingsRow(
                 icon = Icons.Filled.Policy,
-                title = "Data and privacy",
-                subtitle = "Identity checks, audit records, and device tokens.",
+                title = strings.dataPrivacy,
+                subtitle = strings.dataPrivacyHint,
                 showChevron = true,
             )
             SettingsRow(
                 icon = Icons.AutoMirrored.Filled.Help,
-                title = "Help and counter guide",
-                subtitle = "Pickup, return, and damaged parcel instructions.",
+                title = strings.helpGuide,
+                subtitle = strings.helpGuideHint,
                 showChevron = true,
             )
         }
 
-        SettingsSection(title = "Account") {
+        SettingsSection(title = strings.account) {
             SettingsRow(
                 icon = Icons.AutoMirrored.Filled.Logout,
-                title = "Logout",
-                subtitle = "End this staff session on the device.",
+                title = strings.logout,
+                subtitle = strings.logoutHint,
                 tone = SettingsRowTone.Primary,
                 onClick = onLogoutClick,
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
             SettingsRow(
                 icon = Icons.Filled.DeleteForever,
-                title = "Delete account",
-                subtitle = "Request account removal for this staff profile.",
+                title = strings.deleteAccount,
+                subtitle = strings.deleteAccountHint,
                 tone = SettingsRowTone.Danger,
                 onClick = onDeleteAccountClick,
             )
@@ -361,17 +365,18 @@ private fun LockerClosurePage(
     var reason by remember { mutableStateOf("Broken door") }
     var expectedBackAt by remember { mutableStateOf("Tomorrow 09:00") }
     val selectedLocker = lockers.firstOrNull { it.id == selectedLockerId }
+    val strings = LocalSequoStrings.current
 
     AppScroll {
         BackHeader(
-            eyebrow = "Locker controls",
-            title = "Close locker",
-            subtitle = "Choose the locker and recovery note",
+            eyebrow = strings.lockerControls,
+            title = strings.closeLocker,
+            subtitle = strings.closeLockerSubtitle,
             onBack = onBack,
         )
 
         MinimalCard {
-            SectionTitle("Select locker")
+            SectionTitle(strings.selectLocker)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 lockers.chunked(5).forEach { row ->
                     Row(
@@ -392,13 +397,13 @@ private fun LockerClosurePage(
         }
 
         MinimalCard {
-            SectionTitle("Closure details")
+            SectionTitle(strings.closureDetails)
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = reason,
                 onValueChange = { reason = it },
                 singleLine = true,
-                label = { Text("Reason") },
+                label = { Text(strings.reason) },
                 shape = SequoHubShapes.Small,
             )
             OutlinedTextField(
@@ -406,11 +411,11 @@ private fun LockerClosurePage(
                 value = expectedBackAt,
                 onValueChange = { expectedBackAt = it },
                 singleLine = true,
-                label = { Text("Expected available again") },
+                label = { Text(strings.expectedAvailableAgain) },
                 shape = SequoHubShapes.Small,
             )
             PrimaryActionButton(
-                label = "Close ${selectedLocker?.id ?: "locker"} temporarily",
+                label = strings.closeLockerTemporarily(selectedLocker?.id ?: strings.locker.lowercase()),
                 enabled = selectedLocker != null && reason.isNotBlank(),
                 onClick = {
                     selectedLocker?.let { locker ->
@@ -431,19 +436,20 @@ private fun OpeningHoursPage(
     onTodayClosingTimeChange: (String) -> Unit,
     onSave: () -> Unit,
 ) {
+    val strings = LocalSequoStrings.current
     AppScroll {
         BackHeader(
-            eyebrow = "Hub timetable",
-            title = "Opening hours",
-            subtitle = "Keep pickup promises aligned with shop hours",
+            eyebrow = strings.hubTimetable,
+            title = strings.openingHours,
+            subtitle = strings.openingHoursSubtitle,
             onBack = onBack,
         )
 
         MinimalCard {
-            SectionTitle("Today")
+            SectionTitle(strings.today)
             SettingsInlineSwitch(
-                title = "Closed for the day",
-                subtitle = "Use for holidays, stock count, or emergency closure.",
+                title = strings.closedForDay,
+                subtitle = strings.closedForDayHint,
                 checked = state.closeToday,
                 onCheckedChange = onCloseTodayChange,
             )
@@ -452,13 +458,13 @@ private fun OpeningHoursPage(
                 value = state.todayClosingTime,
                 onValueChange = { onTodayClosingTimeChange(it.take(5)) },
                 singleLine = true,
-                label = { Text("Close earlier today") },
+                label = { Text(strings.closeEarlierToday) },
                 shape = SequoHubShapes.Small,
             )
         }
 
         MinimalCard {
-            SectionTitle("Usual week")
+            SectionTitle(strings.usualWeek)
             state.openingHours.forEachIndexed { index, day ->
                 OpeningDayRow(
                     day = day,
@@ -475,7 +481,7 @@ private fun OpeningHoursPage(
                 }
             }
             PrimaryActionButton(
-                label = "Save timetable",
+                label = strings.saveTimetable,
                 onClick = onSave,
             )
         }
@@ -487,6 +493,7 @@ private fun OpeningDayRow(
     day: HubOpeningDay,
     onChange: (HubOpeningDay) -> Unit,
 ) {
+    val strings = LocalSequoStrings.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -497,7 +504,7 @@ private fun OpeningDayRow(
             onCheckedChange = { onChange(day.copy(isOpen = it)) },
         )
         Text(
-            text = day.day,
+            text = day.localizedDay(strings),
             color = MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
@@ -509,7 +516,7 @@ private fun OpeningDayRow(
             onValueChange = { onChange(day.copy(opensAt = it.take(5))) },
             singleLine = true,
             enabled = day.isOpen,
-            label = { Text("Open") },
+            label = { Text(strings.open) },
             shape = SequoHubShapes.Small,
         )
         OutlinedTextField(
@@ -518,7 +525,7 @@ private fun OpeningDayRow(
             onValueChange = { onChange(day.copy(closesAt = it.take(5))) },
             singleLine = true,
             enabled = day.isOpen,
-            label = { Text("Close") },
+            label = { Text(strings.close) },
             shape = SequoHubShapes.Small,
         )
     }
@@ -572,7 +579,7 @@ private fun BackHeader(
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = LocalSequoStrings.current.close,
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -599,6 +606,7 @@ private fun BackHeader(
 
 @Composable
 private fun OperatorCard(state: SettingsUiState) {
+    val strings = LocalSequoStrings.current
     MinimalCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -626,12 +634,12 @@ private fun OperatorCard(state: SettingsUiState) {
                     )
                 }
             }
-            StatusBadge(label = "Hub", tone = BadgeTone.Active)
+            StatusBadge(label = strings.navHub, tone = BadgeTone.Active)
         }
         SettingsRow(
             icon = Icons.Filled.AccountCircle,
             title = state.staffName,
-            subtitle = "Operator profile and permissions",
+            subtitle = strings.operatorProfilePermissions,
             showChevron = true,
         )
     }
@@ -761,24 +769,45 @@ private enum class SettingsPage {
     OpeningHours,
 }
 
-private fun openingHoursSummary(state: SettingsUiState): String {
-    if (state.closeToday) return "Closed today"
+private fun openingHoursSummary(state: SettingsUiState, strings: SequoStrings): String {
+    if (state.closeToday) return strings.closedToday
     val openDays = state.openingHours.filter { it.isOpen }
     val weekdayHours = openDays.firstOrNull { it.day == "Mon" }
     val weekendHours = openDays.firstOrNull { it.day == "Sat" }
     return buildString {
         if (weekdayHours != null) {
-            append("Weekdays ")
+            append(strings.weekdays)
+            append(" ")
             append(weekdayHours.opensAt)
             append("-")
             append(weekdayHours.closesAt)
         }
         if (weekendHours != null) {
             if (isNotEmpty()) append(", ")
-            append("Sat ")
+            append(strings.sat)
+            append(" ")
             append(weekendHours.opensAt)
             append("-")
             append(weekendHours.closesAt)
         }
-    }.ifBlank { "Closed all week" }
+    }.ifBlank { strings.closedToday }
 }
+
+private fun ThemeMode.localizedLabel(strings: SequoStrings): String =
+    when (this) {
+        ThemeMode.System -> strings.systemTheme
+        ThemeMode.Light -> strings.lightTheme
+        ThemeMode.Dark -> strings.darkTheme
+    }
+
+private fun HubOpeningDay.localizedDay(strings: SequoStrings): String =
+    when (day) {
+        "Mon" -> strings.mon
+        "Tue" -> strings.tue
+        "Wed" -> strings.wed
+        "Thu" -> strings.thu
+        "Fri" -> strings.fri
+        "Sat" -> strings.sat
+        "Sun" -> strings.sun
+        else -> day
+    }
