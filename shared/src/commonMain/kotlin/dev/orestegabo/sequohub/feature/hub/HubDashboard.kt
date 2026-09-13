@@ -446,24 +446,49 @@ private fun LockerCell(
             .clip(SequoHubShapes.Small)
             .clickable(onClick = onClick),
         shape = SequoHubShapes.Small,
-        color = backgroundColor,
+        color = if (isMaintenance) MaterialTheme.colorScheme.surface else backgroundColor,
         border = BorderStroke(1.dp, if (isMaintenance) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else status.border),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (isMaintenance) {
-                val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
                 androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawLine(
-                        color = lineColor,
-                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        end = androidx.compose.ui.geometry.Offset(size.width, size.height),
-                        strokeWidth = 1.dp.toPx()
+                    val w = size.width
+                    val h = size.height
+
+                    val leftHalfPath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(w * 0.44f, 0f)
+                        lineTo(w * 0.38f, h * 0.25f)
+                        lineTo(w * 0.52f, h * 0.5f)
+                        lineTo(w * 0.35f, h * 0.75f)
+                        lineTo(w * 0.42f, h)
+                        lineTo(0f, h)
+                        close()
+                    }
+
+                    val rightHalfPath = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w, 0f)
+                        lineTo(w * 0.56f, 0f)
+                        lineTo(w * 0.50f, h * 0.25f)
+                        lineTo(w * 0.64f, h * 0.5f)
+                        lineTo(w * 0.47f, h * 0.75f)
+                        lineTo(w * 0.54f, h)
+                        lineTo(w, h)
+                        close()
+                    }
+
+                    drawPath(path = leftHalfPath, color = backgroundColor)
+                    drawPath(path = rightHalfPath, color = backgroundColor)
+                    drawPath(
+                        path = leftHalfPath,
+                        color = outlineColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
                     )
-                    drawLine(
-                        color = lineColor,
-                        start = androidx.compose.ui.geometry.Offset(0f, size.height),
-                        end = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                        strokeWidth = 1.dp.toPx()
+                    drawPath(
+                        path = rightHalfPath,
+                        color = outlineColor,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
                     )
                 }
 
