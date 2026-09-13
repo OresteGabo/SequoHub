@@ -62,6 +62,7 @@ import kotlin.text.uppercase
 @Composable
 fun HubDashboard(
     lockers: List<LockerUi>,
+    hubBlockedBySequo: Boolean = false,
     onLockerTap: (LockerUi) -> Unit,
 ) {
     var selectedDashboardTab by remember { mutableIntStateOf(0) }
@@ -80,7 +81,13 @@ fun HubDashboard(
             eyebrow = "Point de Relai",
             title = "Hub dashboard",
             subtitle = "Lomé Relay 04",
-            status = if (pendingSyncCount == 0) "Synced" else "$pendingSyncCount pending",
+            status = if (hubBlockedBySequo) {
+                "Blocked"
+            } else if (pendingSyncCount == 0) {
+                "Synced"
+            } else {
+                "$pendingSyncCount pending"
+            },
         )
 
         PrimaryTabRow(
@@ -132,6 +139,7 @@ fun HubDashboard(
         if (selectedDashboardTab == 0) {
             LockerGridCard(
                 lockers = visibleLockers,
+                hubBlockedBySequo = hubBlockedBySequo,
                 onLockerTap = onLockerTap,
             )
         } else {
@@ -173,6 +181,7 @@ private fun LockerSearchCard(
 @Composable
 private fun LockerGridCard(
     lockers: List<LockerUi>,
+    hubBlockedBySequo: Boolean,
     onLockerTap: (LockerUi) -> Unit,
 ) {
     MinimalCard {
@@ -189,24 +198,65 @@ private fun LockerGridCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            StatusBadge(label = "5x5", tone = BadgeTone.Neutral)
+            StatusBadge(
+                label = if (hubBlockedBySequo) "Blocked" else "5x5",
+                tone = if (hubBlockedBySequo) BadgeTone.Hold else BadgeTone.Neutral,
+            )
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            lockers.chunked(5).forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    row.forEach { locker ->
-                        LockerCell(
-                            modifier = Modifier.weight(1f),
-                            locker = locker,
-                            onClick = { onLockerTap(locker) },
-                        )
+        Box {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                lockers.chunked(5).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        row.forEach { locker ->
+                            LockerCell(
+                                modifier = Modifier.weight(1f),
+                                locker = locker,
+                                hubBlockedBySequo = hubBlockedBySequo,
+                                onClick = {
+                                    if (!hubBlockedBySequo) {
+                                        onLockerTap(locker)
+                                    }
+                                },
+                            )
+                        }
+                        repeat(5 - row.size) {
+                            Box(modifier = Modifier.weight(1f))
+                        }
                     }
-                    repeat(5 - row.size) {
-                        Box(modifier = Modifier.weight(1f))
+                }
+            }
+
+            if (hubBlockedBySequo) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 18.dp),
+                    shape = SequoHubShapes.Card,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.32f)),
+                    shadowElevation = 8.dp,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = "Blocked by Sequo",
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "Sequo operations has temporarily disabled this hub. All lockers are unavailable until reactivated.",
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.76f),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
             }
@@ -424,6 +474,7 @@ private fun CustodyStepRow(step: CustodyStep) {
 private fun LockerCell(
     modifier: Modifier,
     locker: LockerUi,
+    hubBlockedBySequo: Boolean,
     onClick: () -> Unit,
 ) {
     val status = locker.lockerVisualColors(MaterialTheme.colorScheme)
@@ -432,17 +483,21 @@ private fun LockerCell(
 
     val backgroundColor = if (isMaintenance) {
         MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
+    } else if (hubBlockedBySequo) {
+        MaterialTheme.colorScheme.surfaceVariant.compositeOver(MaterialTheme.colorScheme.surface)
     } else {
         status.background.compositeOver(MaterialTheme.colorScheme.surface)
     }
 
     val contentColor = if (isMaintenance) {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    } else if (hubBlockedBySequo) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.46f)
     } else {
         status.text
     }
 
-    val depthColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.24f)
+    val depthColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (hubBlockedBySequo) 0.14f else 0.24f)
 
     Box(
         modifier = modifier
@@ -467,7 +522,14 @@ private fun LockerCell(
                 .clip(SequoHubShapes.Small),
             shape = SequoHubShapes.Small,
             color = if (isMaintenance) MaterialTheme.colorScheme.surface else backgroundColor,
-            border = BorderStroke(1.dp, if (isMaintenance) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else status.border),
+            border = BorderStroke(
+                1.dp,
+                if (isMaintenance || hubBlockedBySequo) {
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                } else {
+                    status.border
+                },
+            ),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 if (isMaintenance) {
