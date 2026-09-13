@@ -253,7 +253,7 @@ private fun LockerGridCard(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = "Sequo operations has temporarily disabled this hub. All lockers are unavailable until reactivated.",
+                            text = "Sequo has temporarily paused new drop-offs at this hub. Customers and riders may still collect packages already stored here, but no new packages can be accepted until the hub is reactivated.",
                             color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.76f),
                             style = MaterialTheme.typography.bodySmall,
                         )
