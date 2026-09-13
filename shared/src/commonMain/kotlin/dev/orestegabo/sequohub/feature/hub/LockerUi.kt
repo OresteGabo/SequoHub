@@ -1,5 +1,7 @@
 package dev.orestegabo.sequohub.feature.hub
 
+import dev.orestegabo.sequohub.core.localization.SequoStrings
+
 enum class LockerState(
     val label: String,
     val shortLabel: String,
@@ -32,7 +34,7 @@ data class LockerUi(
 val LockerUi.needsAttention: Boolean
     get() = state == LockerState.Maintenance || feeDueCfa > 0 || syncState != LockerSyncState.Synced
 
-fun sampleLockers(): List<LockerUi> {
+fun sampleLockers(strings: SequoStrings): List<LockerUi> {
     val states = listOf(
         LockerState.Occupied,
         LockerState.Free,
@@ -74,23 +76,23 @@ fun sampleLockers(): List<LockerUi> {
             LockerUi(
                 id = id,
                 state = state,
-                packageLabel = if (state == LockerState.Free) "No package stored" else "Package stored at hub",
-                reference = if (state == LockerState.Free) "Available" else "SQ-${4400 + rowIndex * 5 + column}",
+                packageLabel = if (state == LockerState.Free) strings.clear else strings.packageStored,
+                reference = if (state == LockerState.Free) strings.clear else "SQ-${4400 + rowIndex * 5 + column}",
                 ageLabel = when (state) {
-                    LockerState.Occupied -> if (hasFeeDue) "15 days - fee due" else "Grace ending soon"
-                    LockerState.Maintenance -> "Out of service"
-                    LockerState.Free -> "Ready now"
+                    LockerState.Occupied -> if (hasFeeDue) "15 days - ${strings.feeDue}" else strings.pickupReady
+                    LockerState.Maintenance -> strings.underMaintenance
+                    LockerState.Free -> strings.clear
                 },
                 nextAction = when (state) {
-                    LockerState.Occupied -> if (hasFeeDue) "Collect fee before release" else "Validate QR or pickup code"
-                    LockerState.Maintenance -> "Manager action required"
-                    LockerState.Free -> "Assign incoming package"
+                    LockerState.Occupied -> if (hasFeeDue) strings.collectBeforeRelease else strings.validate
+                    LockerState.Maintenance -> strings.needsAttention
+                    LockerState.Free -> strings.assign
                 },
                 feeDueCfa = if (hasFeeDue) 1000 else 0,
                 primaryAction = when (state) {
-                    LockerState.Free -> "Assign Locker"
-                    LockerState.Maintenance -> "View Maintenance"
-                    LockerState.Occupied -> "Validate Pickup"
+                    LockerState.Free -> strings.assign
+                    LockerState.Maintenance -> strings.maintenance
+                    LockerState.Occupied -> strings.validate
                 },
                 syncState = syncState,
             )
