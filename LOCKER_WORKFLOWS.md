@@ -11,6 +11,32 @@ This document defines the operational workflows for SequoHub partner shops that 
 - Hub staff must never open sealed packages unless Support explicitly creates an audited exception.
 - The app must favor guided flows over free-form actions because partner staff may not have logistics training.
 - Backend state is authoritative. The mobile app may queue safe actions offline, but final validation must sync back to the backend.
+- Sequo operations and approved AI automation may temporarily restrict a hub or a specific hub service. Partner
+  staff cannot override these restrictions from SequoHub.
+
+## Sequo Operations And AI Controls
+
+Sequo may deactivate an entire hub or pause selected hub services when there is a risk, compliance, partner,
+capacity, maintenance, or operational reason. This control is authoritative and must come from Sequo operations,
+system policy, or approved AI automation running through audited backend permissions.
+
+Service-level controls should support:
+
+| Target | Effect |
+| --- | --- |
+| `HUB` | Disable all hub actions except read-only audit/history and support guidance. |
+| `LOCKER_INTAKE` | Stop accepting new packages into lockers while allowing eligible stored-package pickup. |
+| `CUSTOMER_PICKUP` | Stop package releases unless Sequo provides an explicit audited override. |
+| `CUSTOMER_RETURNS` | Stop accepting customer return drop-offs. |
+| `SEQUO_COLLECTION` | Stop releasing packages to collection agents until reactivated. |
+| `PLAN_B_DROP_OFF` | Stop rerouted missed-delivery deposits at this hub. |
+
+When only new locker storage is paused, SequoHub should make the grid unavailable for assignment and show a
+clear Sequo decision notice. Packages already stored at the hub may still be collected by customers or riders
+if pickup remains active.
+
+The app must keep enforcing the last known restrictive state while offline until a fresh backend sync confirms
+that Sequo has reactivated the hub or service.
 
 ## Physical Locker Model
 
