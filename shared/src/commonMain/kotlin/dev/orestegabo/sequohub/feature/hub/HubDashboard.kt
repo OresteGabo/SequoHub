@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -431,7 +433,7 @@ private fun LockerCell(
     val backgroundColor = if (isMaintenance) {
         MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.5f)
     } else {
-        status.background
+        status.background.compositeOver(MaterialTheme.colorScheme.surface)
     }
 
     val contentColor = if (isMaintenance) {
@@ -440,101 +442,120 @@ private fun LockerCell(
         status.text
     }
 
-    Surface(
+    val depthColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.24f)
+
+    Box(
         modifier = modifier
             .aspectRatio(1f)
-            .clip(SequoHubShapes.Small)
             .clickable(onClick = onClick),
-        shape = SequoHubShapes.Small,
-        color = if (isMaintenance) MaterialTheme.colorScheme.surface else backgroundColor,
-        border = BorderStroke(1.dp, if (isMaintenance) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else status.border),
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (isMaintenance) {
-                val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
-                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-                    val w = size.width
-                    val h = size.height
+        if (!isMaintenance) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset(x = 3.dp, y = (-3).dp)
+                    .clip(SequoHubShapes.Small),
+                shape = SequoHubShapes.Small,
+                color = depthColor,
+                shadowElevation = 1.dp,
+            ) {}
+        }
 
-                    val leftHalfPath = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(0f, 0f)
-                        lineTo(w * 0.44f, 0f)
-                        lineTo(w * 0.38f, h * 0.25f)
-                        lineTo(w * 0.52f, h * 0.5f)
-                        lineTo(w * 0.35f, h * 0.75f)
-                        lineTo(w * 0.42f, h)
-                        lineTo(0f, h)
-                        close()
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(SequoHubShapes.Small),
+            shape = SequoHubShapes.Small,
+            color = if (isMaintenance) MaterialTheme.colorScheme.surface else backgroundColor,
+            border = BorderStroke(1.dp, if (isMaintenance) MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f) else status.border),
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isMaintenance) {
+                    val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                        val w = size.width
+                        val h = size.height
+
+                        val leftHalfPath = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(0f, 0f)
+                            lineTo(w * 0.44f, 0f)
+                            lineTo(w * 0.38f, h * 0.25f)
+                            lineTo(w * 0.52f, h * 0.5f)
+                            lineTo(w * 0.35f, h * 0.75f)
+                            lineTo(w * 0.42f, h)
+                            lineTo(0f, h)
+                            close()
+                        }
+
+                        val rightHalfPath = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(w, 0f)
+                            lineTo(w * 0.56f, 0f)
+                            lineTo(w * 0.50f, h * 0.25f)
+                            lineTo(w * 0.64f, h * 0.5f)
+                            lineTo(w * 0.47f, h * 0.75f)
+                            lineTo(w * 0.54f, h)
+                            lineTo(w, h)
+                            close()
+                        }
+
+                        drawPath(path = leftHalfPath, color = backgroundColor)
+                        drawPath(path = rightHalfPath, color = backgroundColor)
+                        drawPath(
+                            path = leftHalfPath,
+                            color = outlineColor,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+                        )
+                        drawPath(
+                            path = rightHalfPath,
+                            color = outlineColor,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+                        )
                     }
 
-                    val rightHalfPath = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(w, 0f)
-                        lineTo(w * 0.56f, 0f)
-                        lineTo(w * 0.50f, h * 0.25f)
-                        lineTo(w * 0.64f, h * 0.5f)
-                        lineTo(w * 0.47f, h * 0.75f)
-                        lineTo(w * 0.54f, h)
-                        lineTo(w, h)
-                        close()
-                    }
-
-                    drawPath(path = leftHalfPath, color = backgroundColor)
-                    drawPath(path = rightHalfPath, color = backgroundColor)
-                    drawPath(
-                        path = leftHalfPath,
-                        color = outlineColor,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
-                    )
-                    drawPath(
-                        path = rightHalfPath,
-                        color = outlineColor,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+                    Icon(
+                        imageVector = Icons.Filled.Build,
+                        contentDescription = "Under Maintenance",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(20.dp),
                     )
                 }
 
-                Icon(
-                    imageVector = Icons.Filled.Build,
-                    contentDescription = "Under Maintenance",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                // Bottom-right watermark package icon for occupied state
+                if (isOccupied && !isMaintenance) {
+                    Icon(
+                        imageVector = Icons.Filled.Package2,
+                        contentDescription = null,
+                        tint = status.text.copy(alpha = 0.18f),
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 4.dp, bottom = 4.dp)
+                            .size(28.dp),
+                    )
+                }
+
+                Column(
                     modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(20.dp),
-                )
-            }
+                        .fillMaxSize()
+                        .padding(7.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = locker.id,
+                        color = contentColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
 
-            // Bottom-right watermark package icon for occupied state
-            if (isOccupied && !isMaintenance) {
-                Icon(
-                    imageVector = Icons.Filled.Package2,
-                    contentDescription = null,
-                    tint = status.text.copy(alpha = 0.18f),
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 4.dp, bottom = 4.dp)
-                        .size(28.dp),
-                )
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(7.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = locker.id,
-                    color = contentColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-
-                Text(
-                    text = locker.cellLabel,
-                    color = contentColor.copy(alpha = if (isMaintenance) 0.6f else 0.82f),
-                    fontSize = 10.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    Text(
+                        text = locker.cellLabel,
+                        color = contentColor.copy(alpha = if (isMaintenance) 0.6f else 0.82f),
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
