@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.component.BadgeTone
 import dev.orestegabo.sequohub.core.designsystem.component.Package2
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
+import dev.orestegabo.sequohub.core.localization.SequoStrings
 
 data class NotificationMessageUi(
     val id: String,
@@ -77,6 +79,7 @@ private fun NotificationMessageRow(
     onUnarchive: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val strings = LocalSequoStrings.current
     Surface(
         modifier = Modifier
             .fillMaxWidth(),
@@ -137,15 +140,15 @@ private fun NotificationMessageRow(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    StatusBadge(label = if (message.isRead) message.type.label else "New", tone = message.type.tone)
+                    StatusBadge(label = if (message.isRead) message.type.localizedLabel else strings.newLabel, tone = message.type.tone)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         if (!message.isRead) {
                             TextButton(onClick = onMarkRead) {
-                                Text("Mark read")
+                                Text(strings.markRead)
                             }
                         }
                         TextButton(onClick = if (message.isArchived) onUnarchive else onArchive) {
-                            Text(if (message.isArchived) "Restore" else "Archive")
+                            Text(if (message.isArchived) strings.restore else strings.archive)
                         }
                     }
                 }
@@ -154,12 +157,12 @@ private fun NotificationMessageRow(
     }
 }
 
-fun sampleNotifications(): List<NotificationMessageUi> =
+fun sampleNotifications(strings: SequoStrings): List<NotificationMessageUi> =
     listOf(
         NotificationMessageUi(
             id = "msg-2048",
-            title = "Pickup waiting at A04",
-            body = "Customer code validated. Extra storage fee must be collected before opening.",
+            title = "${strings.pickupReady} A04",
+            body = strings.collectBeforeRelease,
             time = "09:44",
             type = NotificationType.Pickup,
             isRead = false,
@@ -167,8 +170,8 @@ fun sampleNotifications(): List<NotificationMessageUi> =
         ),
         NotificationMessageUi(
             id = "msg-2047",
-            title = "Sequo collection due",
-            body = "Manifest COL-1042 has 3 parcels ready for handover.",
+            title = strings.packageStored,
+            body = "COL-1042",
             time = "08:20",
             type = NotificationType.System,
             isRead = false,
@@ -176,20 +179,31 @@ fun sampleNotifications(): List<NotificationMessageUi> =
         ),
         NotificationMessageUi(
             id = "msg-2046",
-            title = "Return drop-off confirmed",
-            body = "B03 assigned after return PIN validation. Condition: sealed_ok.",
-            time = "Yesterday",
+            title = strings.returnDropOff,
+            body = "B03 - ${strings.sealedOk}",
+            time = strings.yesterday,
             type = NotificationType.Return,
             isRead = true,
             isArchived = false,
         ),
         NotificationMessageUi(
             id = "msg-2045",
-            title = "Manager review on D02",
-            body = "Damaged outer packaging reported. Standard release is paused.",
-            time = "Yesterday",
+            title = "${strings.needsAttention} D02",
+            body = strings.damaged,
+            time = strings.yesterday,
             type = NotificationType.Hold,
             isRead = true,
             isArchived = true,
         ),
     )
+
+private val NotificationType.localizedLabel: String
+    @Composable get() {
+        val strings = LocalSequoStrings.current
+        return when (this) {
+            NotificationType.Pickup -> strings.pickup
+            NotificationType.Return -> strings.returnPackage
+            NotificationType.Hold -> strings.blocked
+            NotificationType.System -> strings.sync
+        }
+    }
