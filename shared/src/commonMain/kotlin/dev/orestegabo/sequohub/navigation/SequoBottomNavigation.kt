@@ -27,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
+import dev.orestegabo.sequohub.core.localization.SequoStrings
 
 @Composable
 fun SequoBottomNavigation(
@@ -85,6 +87,7 @@ private fun BottomNavItem(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val strings = LocalSequoStrings.current
     val containerColor by animateColorAsState(
         targetValue = if (selected) colorScheme.primaryContainer else Color.Transparent,
         label = "navItemContainer",
@@ -125,14 +128,14 @@ private fun BottomNavItem(
                 ) {
                     Icon(
                         imageVector = if (selected) tab.selectedIcon else tab.unselectedIcon,
-                        contentDescription = tab.label,
+                        contentDescription = tab.localizedLabel(strings),
                         tint = contentColor,
                         modifier = Modifier.size(if (tab == MainTab.Hub) 24.dp else 20.dp),
                     )
                 }
             }
             Text(
-                text = tab.label,
+                text = tab.localizedLabel(strings),
                 color = contentColor,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
@@ -152,3 +155,12 @@ private fun BottomNavItem(
         }
     }
 }
+
+private fun MainTab.localizedLabel(strings: SequoStrings): String =
+    when (this) {
+        MainTab.Scan -> strings.navScan
+        MainTab.Handover -> strings.navActions
+        MainTab.Hub -> strings.navHub
+        MainTab.Activity -> strings.navAudit
+        MainTab.Settings -> strings.navSettings
+    }
