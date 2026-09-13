@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
+import dev.orestegabo.sequohub.core.localization.stringsFor
 import dev.orestegabo.sequohub.feature.activity.ActivityScreen
 import dev.orestegabo.sequohub.feature.handover.HandoverScreen
 import dev.orestegabo.sequohub.feature.hub.HubDashboard
@@ -42,10 +45,12 @@ fun App() {
     }
 
     SequoHubTheme(darkTheme = useDarkTheme) {
-        SequoHubApp(
-            settings = settings,
-            onSettingsChange = { settings = it },
-        )
+        CompositionLocalProvider(LocalSequoStrings provides stringsFor(settings.language)) {
+            SequoHubApp(
+                settings = settings,
+                onSettingsChange = { settings = it },
+            )
+        }
     }
 }
 
@@ -56,8 +61,9 @@ private fun SequoHubApp(
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
-    val lockers = sampleLockers()
-    val hubBlockedBySequo = true
+    val strings = LocalSequoStrings.current
+    val lockers = sampleLockers(strings)
+    val hubBlockedBySequo = false
     val selectedLocker = lockers.firstOrNull { it.id == selectedLockerId }
 
     Box(
