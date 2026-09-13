@@ -32,6 +32,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,13 +44,14 @@ fun HandoverScreen(
 ) {
     var mode by rememberSaveable { mutableStateOf(HandoverMode.Pickup) }
     var code by rememberSaveable { mutableStateOf("") }
+    val strings = LocalSequoStrings.current
 
     AppScroll {
         TopHeader(
-            eyebrow = "Actions",
-            title = "Handover",
-            subtitle = "Pickup and return workflows",
-            status = "ID required",
+            eyebrow = strings.navActions,
+            title = strings.handover,
+            subtitle = strings.handoverSubtitle,
+            status = strings.idRequired,
         )
 
         SingleChoiceSegmentedButtonRow(
@@ -68,22 +70,22 @@ fun HandoverScreen(
                         index = index,
                         count = HandoverMode.entries.size,
                     ),
-                    label = { Text(item.label) },
+                    label = { Text(item.localizedLabel) },
                 )
             }
         }
 
         MinimalCard {
             Text(
-                text = if (mode == HandoverMode.Pickup) "Customer pickup" else "Customer return",
+                text = if (mode == HandoverMode.Pickup) strings.customerPickup else strings.customerReturn,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge,
             )
             CodeEntryRow(
                 value = code,
-                placeholder = if (mode == HandoverMode.Pickup) "Pickup code" else "Return code",
+                placeholder = if (mode == HandoverMode.Pickup) strings.pickupCode else strings.returnCode,
                 onValueChange = { code = cleanCode(it, max = 18) },
-                buttonLabel = "Validate",
+                buttonLabel = strings.validate,
                 onSubmit = {
                     if (mode == HandoverMode.Pickup) {
                         onValidatePickup(code)
@@ -105,6 +107,7 @@ fun HandoverScreen(
 @Composable
 fun FeeNotice(amount: Int) {
     val colorScheme = MaterialTheme.colorScheme
+    val strings = LocalSequoStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SequoHubShapes.Small,
@@ -118,12 +121,12 @@ fun FeeNotice(amount: Int) {
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    text = "Extra storage fee",
+                    text = strings.extraStorageFee,
                     color = colorScheme.onTertiaryContainer,
                     style = MaterialTheme.typography.labelLarge,
                 )
                 Text(
-                    text = "Collect before package release.",
+                    text = strings.collectBeforeRelease,
                     color = colorScheme.onTertiaryContainer.copy(alpha = 0.74f),
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -143,6 +146,7 @@ private fun PickupFeeModal(
     onCollectFeeAndOpen: () -> Unit,
 ) {
     MinimalCard {
+        val strings = LocalSequoStrings.current
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -150,7 +154,7 @@ private fun PickupFeeModal(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Pickup ready",
+                    text = strings.pickupReady,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.headlineSmall,
                 )
@@ -160,15 +164,15 @@ private fun PickupFeeModal(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            StatusBadge(label = "Fee due", tone = BadgeTone.Fee)
+            StatusBadge(label = strings.feeDue, tone = BadgeTone.Fee)
         }
 
-        DetailRow(label = "Free window", value = "Ended 2 days ago")
-        DetailRow(label = "Storage fee", value = "1,000 CFA")
-        DetailRow(label = "Source", value = "Backend storage rules")
+        DetailRow(label = strings.freeWindow, value = strings.endedTwoDaysAgo)
+        DetailRow(label = strings.storageFee, value = "1,000 CFA")
+        DetailRow(label = strings.source, value = strings.backendStorageRules)
 
         FeeNotice(amount = 1000)
-        PrimaryActionButton(label = "Collect Fee & Open Locker", onClick = onCollectFeeAndOpen)
+        PrimaryActionButton(label = strings.collectFeeOpenLocker, onClick = onCollectFeeAndOpen)
     }
 }
 
@@ -177,6 +181,7 @@ private fun ReturnValidationCard(
     onReceiveReturn: () -> Unit,
 ) {
     MinimalCard {
+        val strings = LocalSequoStrings.current
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -184,12 +189,12 @@ private fun ReturnValidationCard(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Return drop-off",
+                    text = strings.returnDropOff,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = "Validate within the 72-hour return window.",
+                    text = strings.returnWindowHint,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -197,16 +202,25 @@ private fun ReturnValidationCard(
             StatusBadge(label = "72h", tone = BadgeTone.New)
         }
 
-        DetailRow(label = "ID check", value = "Required before intake")
-        DetailRow(label = "Refund decision", value = "Sequo final validation only")
-        PrimaryActionButton(label = "Receive Return", onClick = onReceiveReturn)
+        DetailRow(label = strings.idCheck, value = strings.requiredBeforeIntake)
+        DetailRow(label = strings.refundDecision, value = strings.sequoFinalValidationOnly)
+        PrimaryActionButton(label = strings.receiveReturn, onClick = onReceiveReturn)
     }
 }
 
-private enum class HandoverMode(val label: String) {
-    Pickup(label = "Pickup"),
-    Return(label = "Return"),
+private enum class HandoverMode {
+    Pickup,
+    Return,
 }
+
+private val HandoverMode.localizedLabel: String
+    @Composable get() {
+        val strings = LocalSequoStrings.current
+        return when (this) {
+            HandoverMode.Pickup -> strings.pickup
+            HandoverMode.Return -> strings.returnPackage
+        }
+    }
 
 private fun Int.formatCfa(): String =
     toString().reversed().chunked(3).joinToString(",").reversed()
