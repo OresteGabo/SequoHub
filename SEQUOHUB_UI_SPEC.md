@@ -104,7 +104,7 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
   - `damaged_outer_packaging`
 - Best-free-locker assignment panel for one-tap intake.
 - Intake assignment maps to `POST /api/relay/parcels`.
-- Camera/manual credential resolution maps to `POST /api/hub/scan/resolve`, currently tracked in `MOBILE_API_TODO.md`.
+- Camera/manual credential resolution maps to `POST /api/hub/scan/resolve`.
 
 ### Settings
 
@@ -120,7 +120,8 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
   - notification channel preferences for push, in-app, SMS, and quiet hours
   - support and privacy
   - logout and account deletion
-- Account deletion and cross-device preference sync remain API TODO items until backend contracts exist.
+- Account deletion maps to `POST /api/account/deletion-requests`; cross-device preferences map to
+  `GET /api/preferences` and `PATCH /api/preferences`.
 
 ### Activity And Notification Inbox
 
@@ -137,19 +138,18 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Notification channel preferences map to:
   - read effective preference: `GET /api/notifications/preferences/{appFamily}/effective?eventType=...`
   - save preference: `PUT /api/notifications/preferences/{appFamily}`
-- `MOBILE_API_TODO.md` tracks that these preference routes exist in the API repo but are missing from the
-  mobile guide.
+- These preference routes are documented in `MOBILE_API_GUIDE.md`.
 
 ### Handover API Coverage
 
-- Pickup code validation uses the future unified scan resolver in `MOBILE_API_TODO.md`.
+- Pickup code validation uses `POST /api/hub/scan/resolve`.
 - Fee collection and locker opening map to `POST /api/relay/parcels/{parcelId}/release`.
 - Return validation reads `GET /api/returns/{returnId}`.
 - Return receipt maps to `POST /api/returns/{returnId}/relay-dropoff`.
 - Admin-only storage-fee assessment, return-to-seller closure, and operational monitoring endpoints are
   represented as read-only status/fee states in the UI, not exposed as shop-counter actions.
-- Temporary locker closure is tracked in `MOBILE_API_TODO.md` until a locker availability endpoint is documented.
-- Opening hours and closure exceptions are tracked in `MOBILE_API_TODO.md` until a hub timetable endpoint is documented.
+- Temporary locker closure maps to `POST /api/hub/lockers/{lockerId}/availability`.
+- Opening hours and closure exceptions map to `GET /api/hub/opening-hours` and `PUT /api/hub/opening-hours`.
 
 ## Material Components In Use
 
@@ -169,5 +169,6 @@ Letter spacing remains `0sp` to keep the UI crisp and readable across Android an
 - Feature screens live under `feature/hub`, `feature/scan`, `feature/handover`, and `feature/activity`.
 - Shared UI primitives live under `core/designsystem/component`.
 - Theme tokens live under `core/designsystem/theme`.
-- Missing API contracts are tracked in `MOBILE_API_TODO.md`; do not invent client routes not present in `MOBILE_API_GUIDE.md`.
+- `MOBILE_API_GUIDE.md` is the integration source of truth; add future gaps to `MOBILE_API_TODO.md`
+  only when a required route is not implemented or documented there.
 - Bottom navigation uses Material icons and is inspired by the SchoolBridge rounded gradient navigation bar.
