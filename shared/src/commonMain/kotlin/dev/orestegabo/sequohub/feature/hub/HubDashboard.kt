@@ -56,6 +56,8 @@ import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.badgeColors
 import dev.orestegabo.sequohub.core.designsystem.component.statusColors
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
+import dev.orestegabo.sequohub.core.localization.SequoStrings
 import dev.orestegabo.sequohub.feature.handover.FeeNotice
 import kotlin.text.uppercase
 
@@ -67,7 +69,8 @@ fun HubDashboard(
 ) {
     var selectedDashboardTab by remember { mutableIntStateOf(0) }
     var lockerSearch by remember { mutableStateOf("") }
-    val dashboardTabs = listOf("Grid", "Attention")
+    val strings = LocalSequoStrings.current
+    val dashboardTabs = listOf(strings.lockerGrid, strings.needsAttention)
     val visibleLockers = if (lockerSearch.isBlank()) {
         lockers
     } else {
@@ -78,15 +81,15 @@ fun HubDashboard(
 
     AppScroll {
         TopHeader(
-            eyebrow = "Point de Relai",
-            title = "Hub dashboard",
+            eyebrow = strings.pointDeRelai,
+            title = strings.hubDashboard,
             subtitle = "Lomé Relay 04",
             status = if (hubBlockedBySequo) {
-                "Blocked"
+                strings.blocked
             } else if (pendingSyncCount == 0) {
-                "Synced"
+                strings.synced
             } else {
-                "$pendingSyncCount pending"
+                "$pendingSyncCount ${strings.pending}"
             },
         )
 
@@ -113,21 +116,21 @@ fun HubDashboard(
         ) {
             MetricCard(
                 modifier = Modifier.weight(1f),
-                label = "Occupied",
+                label = strings.occupied,
                 value = "17",
-                note = "25 lockers",
+                note = "25 ${strings.locker.lowercase()}s",
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
-                label = "Fees due",
+                label = strings.feesDue,
                 value = "3",
-                note = "today",
+                note = strings.today,
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
-                label = "Sync",
+                label = strings.sync,
                 value = pendingSyncCount.toString(),
-                note = if (pendingSyncCount == 0) "clear" else "pending",
+                note = if (pendingSyncCount == 0) strings.clear else strings.pending,
             )
         }
 
@@ -168,7 +171,7 @@ private fun LockerSearchCard(
                     contentDescription = null,
                 )
             },
-            placeholder = { Text("Search locker, e.g. A04") },
+            placeholder = { Text(LocalSequoStrings.current.lockerSearchPlaceholder) },
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Characters,
                 keyboardType = KeyboardType.Ascii,
@@ -185,21 +188,22 @@ private fun LockerGridCard(
     onLockerTap: (LockerUi) -> Unit,
 ) {
     MinimalCard {
+        val strings = LocalSequoStrings.current
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                SectionTitle("Locker grid")
+                SectionTitle(strings.lockerGrid)
                 Text(
-                    text = "Tap a box to inspect package age and status.",
+                    text = strings.lockerGridHint,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             StatusBadge(
-                label = if (hubBlockedBySequo) "Blocked" else "5x5",
+                label = if (hubBlockedBySequo) strings.blocked else "5x5",
                 tone = if (hubBlockedBySequo) BadgeTone.Hold else BadgeTone.Neutral,
             )
         }
@@ -247,13 +251,13 @@ private fun LockerGridCard(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
-                            text = "Blocked by Sequo",
+                            text = strings.blockedBySequo,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = "Sequo has temporarily paused new drop-offs at this hub. Customers and riders may still collect packages already stored here, but no new packages can be accepted until the hub is reactivated.",
+                            text = strings.blockedHubNotice,
                             color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.76f),
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -272,15 +276,16 @@ private fun AttentionCard(
     onLockerTap: (LockerUi) -> Unit,
 ) {
     MinimalCard {
+        val strings = LocalSequoStrings.current
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                SectionTitle("Needs attention")
+                SectionTitle(strings.needsAttention)
                 Text(
-                    text = "Maintenance, fee due, and local actions waiting to sync.",
+                    text = strings.attentionHint,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -290,7 +295,7 @@ private fun AttentionCard(
 
         if (lockers.isEmpty()) {
             Text(
-                text = "No locker needs attention right now.",
+                text = strings.noLockerNeedsAttention,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -313,6 +318,7 @@ private fun AttentionLockerRow(
     onClick: () -> Unit,
 ) {
     val status = locker.lockerVisualColors(MaterialTheme.colorScheme)
+    val strings = LocalSequoStrings.current
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -331,7 +337,7 @@ private fun AttentionLockerRow(
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
-                    text = "Locker ${locker.id}",
+                    text = "${strings.locker} ${locker.id}",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
@@ -344,7 +350,7 @@ private fun AttentionLockerRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            StatusBadge(label = locker.statusLabel, tone = locker.badgeTone)
+            StatusBadge(label = locker.statusLabel(strings), tone = locker.badgeTone)
         }
     }
 }
@@ -356,6 +362,7 @@ fun LockerDetailOverlay(
     onReportProblem: (LockerUi) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val strings = LocalSequoStrings.current
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -384,7 +391,7 @@ fun LockerDetailOverlay(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Locker ${locker.id}",
+                            text = "${strings.locker} ${locker.id}",
                             color = colorScheme.onSurface,
                             style = MaterialTheme.typography.headlineSmall,
                         )
@@ -394,19 +401,19 @@ fun LockerDetailOverlay(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                    StatusBadge(label = locker.state.label, tone = locker.state.badgeTone)
+                    StatusBadge(label = locker.cellLabel(strings), tone = locker.state.badgeTone)
                 }
 
-                DetailRow(label = "Package age", value = locker.ageLabel)
-                DetailRow(label = "Reference", value = locker.reference)
-                DetailRow(label = "Sync", value = locker.syncState.label)
-                DetailRow(label = "Next action", value = locker.nextAction)
+                DetailRow(label = strings.packageAge, value = locker.ageLabel)
+                DetailRow(label = strings.reference, value = locker.reference)
+                DetailRow(label = strings.sync, value = locker.syncState.label)
+                DetailRow(label = strings.nextAction, value = locker.nextAction)
 
-                CustodyTimeline(locker = locker)
+                CustodyTimeline(locker = locker, strings = strings)
 
                 if (locker.feeDueCfa > 0) {
                     FeeNotice(amount = locker.feeDueCfa)
-                    PrimaryActionButton(label = "Collect Fee & Open Locker")
+                    PrimaryActionButton(label = strings.collectFeeOpenLocker)
                 } else {
                     PrimaryActionButton(label = locker.primaryAction)
                 }
@@ -416,7 +423,7 @@ fun LockerDetailOverlay(
                     onClick = { onReportProblem(locker) },
                     shape = SequoHubShapes.Small,
                 ) {
-                    Text("Report problem")
+                    Text(strings.reportProblem)
                 }
 
                 OutlinedButton(
@@ -424,7 +431,7 @@ fun LockerDetailOverlay(
                     onClick = onDismiss,
                     shape = SequoHubShapes.Small,
                 ) {
-                    Text("Close")
+                    Text(strings.close)
                 }
             }
         }
@@ -432,10 +439,10 @@ fun LockerDetailOverlay(
 }
 
 @Composable
-private fun CustodyTimeline(locker: LockerUi) {
+private fun CustodyTimeline(locker: LockerUi, strings: SequoStrings) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle("Custody timeline")
-        locker.custodySteps.forEach { step ->
+        SectionTitle(strings.custodyTimeline)
+        locker.custodySteps(strings).forEach { step ->
             CustodyStepRow(step = step)
         }
     }
@@ -477,6 +484,7 @@ private fun LockerCell(
     hubBlockedBySequo: Boolean,
     onClick: () -> Unit,
 ) {
+    val strings = LocalSequoStrings.current
     val status = locker.lockerVisualColors(MaterialTheme.colorScheme)
     val isMaintenance = locker.state == LockerState.Maintenance
     val isOccupied = locker.state == LockerState.Occupied
@@ -576,7 +584,7 @@ private fun LockerCell(
 
                     Icon(
                         imageVector = Icons.Filled.Build,
-                        contentDescription = "Under Maintenance",
+                        contentDescription = strings.underMaintenance,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -611,7 +619,7 @@ private fun LockerCell(
                     )
 
                     Text(
-                        text = locker.cellLabel,
+                    text = locker.cellLabel(strings),
                         color = contentColor.copy(alpha = if (isMaintenance) 0.6f else 0.82f),
                         fontSize = 10.sp,
                         maxLines = 1,
@@ -626,17 +634,18 @@ private fun LockerCell(
 @Composable
 private fun LockerLegend() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val strings = LocalSequoStrings.current
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             LegendItem(
                 modifier = Modifier.weight(1f),
-                item = LockerLegendItem(label = "Package stored", icon = Icons.Filled.Package2, tone = BadgeTone.Active),
+                item = LockerLegendItem(label = strings.packageStored, icon = Icons.Filled.Package2, tone = BadgeTone.Active),
             )
             LegendItem(
                 modifier = Modifier.weight(1f),
-                item = LockerLegendItem(label = "Maintenance", icon = Icons.Filled.Build, tone = BadgeTone.Hold),
+                item = LockerLegendItem(label = strings.maintenance, icon = Icons.Filled.Build, tone = BadgeTone.Hold),
             )
         }
     }
@@ -691,86 +700,86 @@ private data class CustodyStep(
     val tone: BadgeTone,
 )
 
-private val LockerUi.custodySteps: List<CustodyStep>
-    get() = when {
+private fun LockerUi.custodySteps(strings: SequoStrings): List<CustodyStep> =
+    when {
         syncState == LockerSyncState.Failed -> listOf(
             CustodyStep(
-                title = "Sync failed",
-                detail = "This locker has a local action that needs operator review.",
+                title = strings.sync,
+                detail = strings.attentionHint,
                 tone = BadgeTone.Hold,
             ),
             CustodyStep(
-                title = "Last known action",
+                title = strings.nextAction,
                 detail = nextAction,
                 tone = badgeTone,
             ),
         )
         syncState == LockerSyncState.Pending -> listOf(
             CustodyStep(
-                title = "Pending sync",
-                detail = "Local action is queued and will sync when connectivity returns.",
+                title = strings.pending,
+                detail = strings.attentionHint,
                 tone = BadgeTone.Fee,
             ),
             CustodyStep(
-                title = "Last known action",
+                title = strings.nextAction,
                 detail = nextAction,
                 tone = badgeTone,
             ),
         )
         state == LockerState.Free -> listOf(
             CustodyStep(
-                title = "Locker ready",
-                detail = "No parcel is assigned to this compartment.",
+                title = strings.clear,
+                detail = strings.temporarilyCloseLockerHint,
                 tone = BadgeTone.Neutral,
             ),
             CustodyStep(
-                title = "Next intake",
-                detail = "Assign this locker when a package is scanned in.",
+                title = strings.intake,
+                detail = strings.lockerGridHint,
                 tone = BadgeTone.Active,
             ),
         )
         state == LockerState.Maintenance -> listOf(
             CustodyStep(
-                title = "Locker closed",
-                detail = "This compartment is blocked from handover flows.",
+                title = strings.closeLocker,
+                detail = strings.temporarilyCloseLockerHint,
                 tone = BadgeTone.Hold,
             ),
             CustodyStep(
-                title = "Manager review",
+                title = strings.nextAction,
                 detail = nextAction,
                 tone = BadgeTone.Neutral,
             ),
         )
         feeDueCfa > 0 -> listOf(
             CustodyStep(
-                title = "Package stored",
-                detail = "$reference is waiting in locker $id.",
+                title = strings.packageStored,
+                detail = "$reference - ${strings.locker} $id",
                 tone = BadgeTone.Active,
             ),
             CustodyStep(
-                title = "Pickup overdue",
+                title = strings.feeDue,
                 detail = ageLabel,
                 tone = BadgeTone.Fee,
             ),
             CustodyStep(
-                title = "Release control",
-                detail = "Collect the fee, then validate the pickup code.",
+                title = strings.validate,
+                detail = strings.collectBeforeRelease,
                 tone = BadgeTone.New,
             ),
         )
         else -> listOf(
             CustodyStep(
-                title = "Package stored",
-                detail = "$reference is waiting in locker $id.",
+                title = strings.packageStored,
+                detail = "$reference - ${strings.locker} $id",
                 tone = BadgeTone.Active,
             ),
             CustodyStep(
-                title = "Customer notified",
+                title = strings.notificationInbox,
                 detail = ageLabel,
                 tone = BadgeTone.Neutral,
             ),
             CustodyStep(
-                title = "Pickup code required",
+                title = strings.pickupCode,
                 detail = nextAction,
                 tone = BadgeTone.New,
             ),
@@ -792,20 +801,20 @@ private val LockerUi.badgeTone: BadgeTone
         else -> state.badgeTone
     }
 
-private val LockerUi.statusLabel: String
-    get() = when {
-        syncState == LockerSyncState.Failed -> "Sync fail"
-        syncState == LockerSyncState.Pending -> "Pending"
-        feeDueCfa > 0 -> "Fee due"
-        state == LockerState.Occupied -> "Stored"
-        else -> state.shortLabel
+private fun LockerUi.statusLabel(strings: SequoStrings): String =
+    when {
+        syncState == LockerSyncState.Failed -> strings.sync
+        syncState == LockerSyncState.Pending -> strings.pending
+        feeDueCfa > 0 -> strings.feeDue
+        state == LockerState.Occupied -> strings.packageStored
+        else -> cellLabel(strings)
     }
 
-private val LockerUi.cellLabel: String
-    get() = when (state) {
-        LockerState.Free -> LockerState.Free.shortLabel
-        LockerState.Occupied -> LockerState.Occupied.shortLabel
-        LockerState.Maintenance -> LockerState.Maintenance.shortLabel
+private fun LockerUi.cellLabel(strings: SequoStrings): String =
+    when (state) {
+        LockerState.Free -> strings.emptyLocker
+        LockerState.Occupied -> strings.occupied
+        LockerState.Maintenance -> strings.close
     }
 
 private fun LockerUi.lockerVisualColors(colorScheme: androidx.compose.material3.ColorScheme): StatusColors =
