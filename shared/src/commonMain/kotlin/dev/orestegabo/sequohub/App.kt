@@ -57,6 +57,7 @@ private fun SequoHubApp(
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
     val lockers = sampleLockers()
+    val hubBlockedBySequo = true
     val selectedLocker = lockers.firstOrNull { it.id == selectedLockerId }
 
     Box(
@@ -67,6 +68,7 @@ private fun SequoHubApp(
         when (selectedTab) {
             MainTab.Hub -> HubDashboard(
                 lockers = lockers,
+                hubBlockedBySequo = hubBlockedBySequo,
                 onLockerTap = { selectedLockerId = it.id },
             )
             MainTab.Scan -> ScanReceiveScreen(
