@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ReportProblem
@@ -24,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.component.BadgeTone
+import dev.orestegabo.sequohub.core.designsystem.component.Package2
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 
 data class NotificationMessageUi(
@@ -41,7 +41,7 @@ enum class NotificationType(
     val tone: BadgeTone,
     val icon: ImageVector,
 ) {
-    Pickup(label = "Pickup", tone = BadgeTone.New, icon = Icons.Filled.Inventory2),
+    Pickup(label = "Pickup", tone = BadgeTone.New, icon = Icons.Filled.Package2),
     Return(label = "Return", tone = BadgeTone.Active, icon = Icons.Filled.LocalShipping),
     Hold(label = "Hold", tone = BadgeTone.Hold, icon = Icons.Filled.ReportProblem),
     System(label = "System", tone = BadgeTone.Neutral, icon = Icons.Filled.Notifications),
