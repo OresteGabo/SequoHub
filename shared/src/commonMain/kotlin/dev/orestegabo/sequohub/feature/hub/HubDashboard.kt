@@ -34,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -540,6 +542,53 @@ private fun LockerCell(
             ),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
+                if (!isMaintenance) {
+                    val highlightAlpha = if (hubBlockedBySequo) 0.14f else 0.26f
+                    val shadeAlpha = if (hubBlockedBySequo) 0.10f else 0.16f
+                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = highlightAlpha),
+                                    Color.Transparent,
+                                ),
+                                startY = 0f,
+                                endY = size.height * 0.58f,
+                            ),
+                        )
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = highlightAlpha * 0.68f),
+                                    Color.Transparent,
+                                ),
+                                startX = 0f,
+                                endX = size.width * 0.56f,
+                            ),
+                        )
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = shadeAlpha),
+                                ),
+                                startY = size.height * 0.46f,
+                                endY = size.height,
+                            ),
+                        )
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = shadeAlpha * 0.78f),
+                                ),
+                                startX = size.width * 0.48f,
+                                endX = size.width,
+                            ),
+                        )
+                    }
+                }
+
                 if (isMaintenance) {
                     val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
                     androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
@@ -619,7 +668,7 @@ private fun LockerCell(
                     )
 
                     Text(
-                    text = locker.cellLabel(strings),
+                        text = locker.cellLabel(strings),
                         color = contentColor.copy(alpha = if (isMaintenance) 0.6f else 0.82f),
                         fontSize = 10.sp,
                         maxLines = 1,
