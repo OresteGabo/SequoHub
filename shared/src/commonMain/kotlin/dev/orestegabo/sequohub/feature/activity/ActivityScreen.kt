@@ -29,6 +29,8 @@ import dev.orestegabo.sequohub.core.designsystem.component.MinimalCard
 import dev.orestegabo.sequohub.core.designsystem.component.SectionTitle
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
+import dev.orestegabo.sequohub.core.localization.SequoStrings
 import dev.orestegabo.sequohub.feature.notifications.NotificationInboxPanel
 import dev.orestegabo.sequohub.feature.notifications.NotificationMessageUi
 import dev.orestegabo.sequohub.feature.notifications.sampleNotifications
@@ -41,16 +43,17 @@ fun ActivityScreen(
     onNotificationUnarchive: (NotificationMessageUi) -> Unit,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Audit", "Inbox")
-    var notifications by remember { mutableStateOf(sampleNotifications()) }
+    val strings = LocalSequoStrings.current
+    val tabs = listOf(strings.audit, strings.inbox)
+    var notifications by remember(strings) { mutableStateOf(sampleNotifications(strings)) }
     val unreadCount = notifications.count { !it.isRead && !it.isArchived }
 
     AppScroll {
         TopHeader(
-            eyebrow = "Audit",
-            title = "Activity",
-            subtitle = "Hub events and notification inbox",
-            status = "$unreadCount new",
+            eyebrow = strings.audit,
+            title = strings.activity,
+            subtitle = strings.activitySubtitle,
+            status = "$unreadCount ${strings.newLabel}",
         )
 
         PrimaryTabRow(
@@ -69,7 +72,7 @@ fun ActivityScreen(
         }
 
         when (selectedTab) {
-            0 -> AuditTimeline()
+            0 -> AuditTimeline(strings)
             else -> MinimalCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -80,19 +83,19 @@ fun ActivityScreen(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        SectionTitle("Notification inbox")
+                        SectionTitle(strings.notificationInbox)
                         Text(
-                            text = "Push and in-app alerts for this SequoHub device.",
+                            text = strings.inboxHint,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        StatusBadge(label = "$unreadCount unread", tone = BadgeTone.New)
+                        StatusBadge(label = "$unreadCount ${strings.unread}", tone = BadgeTone.New)
                         IconButton(onClick = onNotificationsRefresh) {
                             Icon(
                                 imageVector = Icons.Filled.Refresh,
-                                contentDescription = "Refresh inbox",
+                                contentDescription = strings.refreshInbox,
                             )
                         }
                     }
@@ -124,30 +127,30 @@ fun ActivityScreen(
 }
 
 @Composable
-private fun AuditTimeline() {
+private fun AuditTimeline(strings: SequoStrings) {
     MinimalCard {
         ActivityItem(
             time = "09:42",
-            title = "Pickup released",
-            subtitle = "A04 opened after fee collection",
+            title = strings.pickupReady,
+            subtitle = "A04 - ${strings.collectBeforeRelease}",
             tone = BadgeTone.Active,
         )
         ActivityItem(
             time = "09:18",
-            title = "Return received",
-            subtitle = "B03 assigned, condition sealed ok",
+            title = strings.receiveReturn,
+            subtitle = "B03 - ${strings.sealedOk}",
             tone = BadgeTone.New,
         )
         ActivityItem(
             time = "08:55",
-            title = "Manager review",
-            subtitle = "D02 paused after damaged packaging report",
+            title = strings.needsAttention,
+            subtitle = "D02 - ${strings.damaged}",
             tone = BadgeTone.Hold,
         )
         ActivityItem(
             time = "08:20",
-            title = "Sequo collection",
-            subtitle = "3 parcels released to manifest COL-1042",
+            title = strings.packageStored,
+            subtitle = "COL-1042",
             tone = BadgeTone.Neutral,
         )
     }
