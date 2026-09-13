@@ -38,6 +38,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
+import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,35 +49,36 @@ fun ScanReceiveScreen(
 ) {
     var manualCode by rememberSaveable { mutableStateOf("") }
     var selectedCondition by rememberSaveable { mutableStateOf(ConditionFlag.SealedOk) }
+    val strings = LocalSequoStrings.current
 
     AppScroll {
         TopHeader(
-            eyebrow = "Intake",
-            title = "Scan package",
-            subtitle = "Incoming parcel or Plan B delivery",
-            status = "Fast path",
+            eyebrow = strings.intake,
+            title = strings.scanPackage,
+            subtitle = strings.scanSubtitle,
+            status = strings.fastPath,
         )
 
         ScannerLaunchPanel(onStartCameraScan = onStartCameraScan)
 
         MinimalCard {
             Text(
-                text = "Manual fallback",
+                text = strings.manualFallback,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
             CodeEntryRow(
                 value = manualCode,
-                placeholder = "Package ID or QR code",
+                placeholder = strings.packageIdOrQrCode,
                 onValueChange = { manualCode = cleanCode(it, max = 22) },
-                buttonLabel = "Resolve",
+                buttonLabel = strings.resolve,
                 onSubmit = { onResolveManualCode(manualCode) },
             )
         }
 
         MinimalCard {
             Text(
-                text = "Condition",
+                text = strings.condition,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -91,7 +93,7 @@ fun ScanReceiveScreen(
                             index = index,
                             count = ConditionFlag.entries.size,
                         ),
-                        label = { Text(flag.label) },
+                        label = { Text(flag.localizedLabel) },
                     )
                 }
             }
@@ -105,6 +107,7 @@ private fun ScannerLaunchPanel(
     onStartCameraScan: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val strings = LocalSequoStrings.current
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -137,20 +140,20 @@ private fun ScannerLaunchPanel(
             }
 
             Text(
-                text = "Scan package QR",
+                text = strings.scanPackageQr,
                 color = colorScheme.onSurface,
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(top = 18.dp),
             )
             Text(
-                text = "Open the camera only when staff starts intake.",
+                text = strings.scanCameraHint,
                 color = colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 6.dp, bottom = 18.dp),
             )
             PrimaryActionButton(
                 modifier = Modifier.width(220.dp),
-                label = "Start camera scan",
+                label = strings.startCameraScan,
                 onClick = onStartCameraScan,
             )
         }
@@ -162,6 +165,7 @@ private fun IntakeAssignment(
     onAssignLocker: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val strings = LocalSequoStrings.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SequoHubShapes.Small,
@@ -185,7 +189,7 @@ private fun IntakeAssignment(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Best free locker",
+                        text = strings.bestFreeLocker,
                         color = colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium,
                     )
@@ -199,14 +203,23 @@ private fun IntakeAssignment(
             }
             PrimaryActionButton(
                 modifier = Modifier.width(116.dp),
-                label = "Assign",
+                label = strings.assign,
                 onClick = onAssignLocker,
             )
         }
     }
 }
 
-private enum class ConditionFlag(val label: String, val apiValue: String) {
-    SealedOk(label = "Sealed OK", apiValue = "sealed_ok"),
-    DamagedOuterPackaging(label = "Damaged", apiValue = "damaged_outer_packaging"),
+private enum class ConditionFlag(val apiValue: String) {
+    SealedOk(apiValue = "sealed_ok"),
+    DamagedOuterPackaging(apiValue = "damaged_outer_packaging"),
 }
+
+private val ConditionFlag.localizedLabel: String
+    @Composable get() {
+        val strings = LocalSequoStrings.current
+        return when (this) {
+            ConditionFlag.SealedOk -> strings.sealedOk
+            ConditionFlag.DamagedOuterPackaging -> strings.damaged
+        }
+    }
