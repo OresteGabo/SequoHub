@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 
 val LightColorScheme = lightColorScheme(
     primary = primaryLight,
@@ -89,9 +90,14 @@ fun SequoHubTheme(
     colorScheme: ColorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content,
-    )
+    val semanticColors = if (darkTheme) DarkSequoSemanticColors else LightSequoSemanticColors
+
+    CompositionLocalProvider(LocalSequoSemanticColors provides semanticColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }
