@@ -158,8 +158,6 @@ private fun BottomNavItem(
 
 private fun MainTab.localizedLabel(strings: SequoStrings): String =
     when (this) {
-        MainTab.Scan -> strings.navScan
-        MainTab.Handover -> strings.navActions
         MainTab.Hub -> strings.navHub
         MainTab.Activity -> strings.navAudit
         MainTab.Settings -> strings.navSettings
