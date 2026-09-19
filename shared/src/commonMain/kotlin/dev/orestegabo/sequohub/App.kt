@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -22,11 +26,10 @@ import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.stringsFor
 import dev.orestegabo.sequohub.feature.activity.ActivityScreen
-import dev.orestegabo.sequohub.feature.handover.HandoverScreen
+import dev.orestegabo.sequohub.feature.auth.AuthScreen
 import dev.orestegabo.sequohub.feature.hub.HubDashboard
 import dev.orestegabo.sequohub.feature.hub.LockerDetailOverlay
 import dev.orestegabo.sequohub.feature.hub.sampleLockers
-import dev.orestegabo.sequohub.feature.scan.ScanReceiveScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsUiState
 import dev.orestegabo.sequohub.feature.settings.ThemeMode
@@ -59,12 +62,23 @@ private fun SequoHubApp(
     settings: SettingsUiState,
     onSettingsChange: (SettingsUiState) -> Unit,
 ) {
+    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
     val strings = LocalSequoStrings.current
     val lockers = sampleLockers(strings)
     val hubBlockedBySequo = false
     val selectedLocker = lockers.firstOrNull { it.id == selectedLockerId }
+
+    if (!isAuthenticated) {
+        AuthScreen(
+            onLogin = { isAuthenticated = true },
+            onGoogleLogin = { isAuthenticated = true },
+            onAppleLogin = { isAuthenticated = true },
+            onPrivacyTermsClick = {},
+        )
+        return
+    }
 
     Box(
         modifier = Modifier
@@ -77,44 +91,11 @@ private fun SequoHubApp(
                 hubBlockedBySequo = hubBlockedBySequo,
                 onLockerTap = { selectedLockerId = it.id },
             )
-            MainTab.Scan -> ScanReceiveScreen(
-                onStartCameraScan = {
-                    missingFeature("Camera scanner")
-                },
-                onResolveManualCode = {
-                    missingFeature("Manual code resolution")
-                },
-                onAssignLocker = {
-                    missingFeature("Locker assignment")
-                },
-            )
-            MainTab.Handover -> HandoverScreen(
-                onValidatePickup = {
-                    missingFeature("Pickup validation")
-                },
-                onCollectFeeAndOpen = {
-                    missingFeature("Fee collection and locker opening")
-                },
-                onValidateReturn = {
-                    missingFeature("Return validation")
-                },
-                onReceiveReturn = {
-                    missingFeature("Return receipt")
-                },
-            )
             MainTab.Activity -> ActivityScreen(
-                onNotificationsRefresh = {
-                    missingFeature("Notification inbox refresh")
-                },
-                onNotificationRead = {
-                    missingFeature("Mark notification as read")
-                },
-                onNotificationArchive = {
-                    missingFeature("Archive notification")
-                },
-                onNotificationUnarchive = {
-                    missingFeature("Restore notification")
-                },
+                onNotificationsRefresh = {},
+                onNotificationRead = {},
+                onNotificationArchive = {},
+                onNotificationUnarchive = {},
             )
             MainTab.Settings -> SettingsScreen(
                 state = settings,
@@ -127,27 +108,31 @@ private fun SequoHubApp(
                 onOpeningHoursChange = { onSettingsChange(settings.copy(openingHours = it)) },
                 onCloseTodayChange = { onSettingsChange(settings.copy(closeToday = it)) },
                 onTodayClosingTimeChange = { onSettingsChange(settings.copy(todayClosingTime = it)) },
-                onSaveOpeningHours = {
-                    missingFeature("Hub timetable save")
-                },
-                onRegisterNotifications = {
-                    missingFeature("Push notification registration")
-                },
-                onRevokeNotifications = {
-                    missingFeature("Push notification revocation")
-                },
-                onOpenNotificationPreferences = {
-                    missingFeature("Notification preferences")
-                },
-                onMarkLockerUnavailable = { _, _, _ ->
-                    missingFeature("Temporary locker closure")
-                },
+                onSaveOpeningHours = {},
+                onRegisterNotifications = {},
+                onRevokeNotifications = {},
+                onOpenNotificationPreferences = {},
+                onMarkLockerUnavailable = { _, _, _ -> },
                 onLogout = {
-                    missingFeature("Logout")
+                    selectedTab = MainTab.Hub
+                    selectedLockerId = null
+                    isAuthenticated = false
                 },
-                onDeleteAccount = {
-                    missingFeature("Account deletion")
-                },
+                onDeleteAccount = {},
+            )
+        }
+
+        FloatingActionButton(
+            onClick = {},
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 22.dp, bottom = 104.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.QrCodeScanner,
+                contentDescription = strings.scanPackageQr,
             )
         }
 
@@ -164,13 +149,8 @@ private fun SequoHubApp(
             LockerDetailOverlay(
                 locker = locker,
                 onDismiss = { selectedLockerId = null },
-                onReportProblem = {
-                    missingFeature("Relay problem reporting")
-                },
+                onReportProblem = {},
             )
         }
     }
 }
-
-private fun missingFeature(name: String): Nothing =
-    error("Missing implementation: $name")
