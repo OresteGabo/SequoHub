@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.component.BadgeTone
 import dev.orestegabo.sequohub.core.designsystem.component.Package2
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
+import dev.orestegabo.sequohub.core.designsystem.theme.sequoSemanticColors
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.SequoStrings
 
@@ -79,6 +80,7 @@ private fun NotificationMessageRow(
     onUnarchive: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val semanticColors = MaterialTheme.sequoSemanticColors
     val strings = LocalSequoStrings.current
     Surface(
         modifier = Modifier
@@ -86,7 +88,7 @@ private fun NotificationMessageRow(
         color = if (message.isRead) {
             colorScheme.surface
         } else {
-            colorScheme.primaryContainer.copy(alpha = 0.22f)
+            semanticColors.infoContainer.copy(alpha = 0.42f)
         },
         shape = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
     ) {
@@ -100,7 +102,7 @@ private fun NotificationMessageRow(
             Icon(
                 imageVector = message.type.icon,
                 contentDescription = null,
-                tint = if (message.isRead) colorScheme.onSurfaceVariant else colorScheme.primary,
+                tint = if (message.isRead) colorScheme.onSurfaceVariant else semanticColors.info,
                 modifier = Modifier.padding(top = 2.dp),
             )
             Column(
