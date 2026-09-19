@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.orestegabo.sequohub.core.designsystem.theme.CounterNumberTextStyle
+import dev.orestegabo.sequohub.core.designsystem.theme.sequoSemanticColors
 
 @Composable
 fun MinimalCard(
@@ -125,24 +126,32 @@ fun StatusBadge(
     label: String,
     tone: BadgeTone,
 ) {
-    val badge = tone.badgeColors(MaterialTheme.colorScheme)
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+    val colorScheme = MaterialTheme.colorScheme
+    val badge = tone.badgeColors(colorScheme, MaterialTheme.sequoSemanticColors)
+    Surface(
+        shape = SequoHubShapes.IconCapsule,
+        color = badge.background,
+        border = BorderStroke(1.dp, badge.border),
+        tonalElevation = 0.dp,
     ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(7.dp)
-                .clip(SequoHubShapes.IconCapsule)
-                .background(badge.text),
-        )
-        Text(
-            text = label,
-            color = badge.text,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(SequoHubShapes.IconCapsule)
+                    .background(badge.text),
+            )
+            Text(
+                text = label,
+                color = badge.text,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
+        }
     }
 }
