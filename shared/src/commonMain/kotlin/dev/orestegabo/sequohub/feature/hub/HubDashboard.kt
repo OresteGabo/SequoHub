@@ -58,6 +58,8 @@ import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.badgeColors
 import dev.orestegabo.sequohub.core.designsystem.component.statusColors
+import dev.orestegabo.sequohub.core.designsystem.theme.SequoSemanticColors
+import dev.orestegabo.sequohub.core.designsystem.theme.sequoSemanticColors
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.SequoStrings
 import dev.orestegabo.sequohub.feature.handover.FeeNotice
@@ -319,7 +321,10 @@ private fun AttentionLockerRow(
     locker: LockerUi,
     onClick: () -> Unit,
 ) {
-    val status = locker.lockerVisualColors(MaterialTheme.colorScheme)
+    val status = locker.lockerVisualColors(
+        colorScheme = MaterialTheme.colorScheme,
+        semanticColors = MaterialTheme.sequoSemanticColors,
+    )
     val strings = LocalSequoStrings.current
 
     Surface(
@@ -487,7 +492,10 @@ private fun LockerCell(
     onClick: () -> Unit,
 ) {
     val strings = LocalSequoStrings.current
-    val status = locker.lockerVisualColors(MaterialTheme.colorScheme)
+    val status = locker.lockerVisualColors(
+        colorScheme = MaterialTheme.colorScheme,
+        semanticColors = MaterialTheme.sequoSemanticColors,
+    )
     val isMaintenance = locker.state == LockerState.Maintenance
     val isOccupied = locker.state == LockerState.Occupied
 
@@ -705,7 +713,10 @@ private fun LegendItem(
     modifier: Modifier,
     item: LockerLegendItem,
 ) {
-    val status = item.tone.badgeColors(MaterialTheme.colorScheme)
+    val status = item.tone.badgeColors(
+        colorScheme = MaterialTheme.colorScheme,
+        semanticColors = MaterialTheme.sequoSemanticColors,
+    )
 
     Row(
         modifier = modifier,
@@ -866,8 +877,11 @@ private fun LockerUi.cellLabel(strings: SequoStrings): String =
         LockerState.Maintenance -> strings.close
     }
 
-private fun LockerUi.lockerVisualColors(colorScheme: androidx.compose.material3.ColorScheme): StatusColors =
-    state.statusColors(colorScheme)
+private fun LockerUi.lockerVisualColors(
+    colorScheme: androidx.compose.material3.ColorScheme,
+    semanticColors: SequoSemanticColors,
+): StatusColors =
+    state.statusColors(colorScheme, semanticColors)
 
 private val LockerSyncState.badgeTone: BadgeTone
     get() = when (this) {
