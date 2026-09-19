@@ -13,24 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,8 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,7 +51,6 @@ import dev.orestegabo.sequohub.core.designsystem.theme.sequoSemanticColors
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.SequoStrings
 import dev.orestegabo.sequohub.feature.handover.FeeNotice
-import kotlin.text.uppercase
 
 @Composable
 fun HubDashboard(
@@ -71,17 +58,9 @@ fun HubDashboard(
     hubBlockedBySequo: Boolean = false,
     onLockerTap: (LockerUi) -> Unit,
 ) {
-    var selectedDashboardTab by remember { mutableIntStateOf(0) }
-    var lockerSearch by remember { mutableStateOf("") }
     val strings = LocalSequoStrings.current
-    val dashboardTabs = listOf(strings.lockerGrid, strings.needsAttention)
-    val visibleLockers = if (lockerSearch.isBlank()) {
-        lockers
-    } else {
-        lockers.filter { it.id.contains(lockerSearch.trim(), ignoreCase = true) }
-    }
     val pendingSyncCount = lockers.count { it.syncState != LockerSyncState.Synced }
-    val attentionLockers = visibleLockers.filter { it.needsAttention }
+    val attentionLockers = lockers.filter { it.needsAttention }
 
     AppScroll {
         TopHeader(
@@ -96,21 +75,6 @@ fun HubDashboard(
                 "$pendingSyncCount ${strings.pending}"
             },
         )
-
-        PrimaryTabRow(
-            selectedTabIndex = selectedDashboardTab,
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary,
-        ) {
-            dashboardTabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedDashboardTab == index,
-                    onClick = { selectedDashboardTab = index },
-                    text = { Text(title) },
-                )
-            }
-        }
 
         Row(
             modifier = Modifier
@@ -138,49 +102,15 @@ fun HubDashboard(
             )
         }
 
-        LockerSearchCard(
-            lockerSearch = lockerSearch,
-            onLockerSearchChange = { lockerSearch = it.take(3).uppercase() },
+        LockerGridCard(
+            lockers = lockers,
+            hubBlockedBySequo = hubBlockedBySequo,
+            onLockerTap = onLockerTap,
         )
 
-        if (selectedDashboardTab == 0) {
-            LockerGridCard(
-                lockers = visibleLockers,
-                hubBlockedBySequo = hubBlockedBySequo,
-                onLockerTap = onLockerTap,
-            )
-        } else {
-            AttentionCard(
-                lockers = attentionLockers,
-                onLockerTap = onLockerTap,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LockerSearchCard(
-    lockerSearch: String,
-    onLockerSearchChange: (String) -> Unit,
-) {
-    MinimalCard {
-        OutlinedTextField(
-            modifier = Modifier.fillMaxWidth(),
-            value = lockerSearch,
-            onValueChange = onLockerSearchChange,
-            singleLine = true,
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Search,
-                    contentDescription = null,
-                )
-            },
-            placeholder = { Text(LocalSequoStrings.current.lockerSearchPlaceholder) },
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Characters,
-                keyboardType = KeyboardType.Ascii,
-            ),
-            shape = SequoHubShapes.Small,
+        AttentionCard(
+            lockers = attentionLockers,
+            onLockerTap = onLockerTap,
         )
     }
 }
