@@ -31,6 +31,7 @@ import dev.orestegabo.sequohub.feature.auth.AuthScreen
 import dev.orestegabo.sequohub.feature.hub.HubDashboard
 import dev.orestegabo.sequohub.feature.hub.LockerDetailOverlay
 import dev.orestegabo.sequohub.feature.hub.sampleLockers
+import dev.orestegabo.sequohub.feature.legal.LegalScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsUiState
 import dev.orestegabo.sequohub.feature.settings.ThemeMode
@@ -64,6 +65,7 @@ private fun SequoHubApp(
     onSettingsChange: (SettingsUiState) -> Unit,
 ) {
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
+    var showLegalScreen by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
     val strings = LocalSequoStrings.current
@@ -72,13 +74,18 @@ private fun SequoHubApp(
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
 
     if (!isAuthenticated) {
-        AuthScreen(
-            ///TODO authenticating the user
-            onLogin = { isAuthenticated = true },
-            onGoogleLogin = { isAuthenticated = true },
-            onAppleLogin = { isAuthenticated = true },
-            onPrivacyTermsClick = {},
-        )
+        if (showLegalScreen) {
+            LegalScreen(onBack = { showLegalScreen = false })
+        } else {
+            AuthScreen(
+                language = settings.language,
+                onLanguageChange = { onSettingsChange(settings.copy(language = it)) },
+                onLogin = { isAuthenticated = true },
+                onGoogleLogin = { isAuthenticated = true },
+                onAppleLogin = { isAuthenticated = true },
+                onPrivacyTermsClick = { showLegalScreen = true },
+            )
+        }
         return
     }
 
