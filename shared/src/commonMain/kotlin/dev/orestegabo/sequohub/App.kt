@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirstOrNull
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.stringsFor
@@ -68,10 +69,11 @@ private fun SequoHubApp(
     val strings = LocalSequoStrings.current
     val lockers = sampleLockers(strings)
     val hubBlockedBySequo = false
-    val selectedLocker = lockers.firstOrNull { it.id == selectedLockerId }
+    val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
 
     if (!isAuthenticated) {
         AuthScreen(
+            ///TODO authenticating the user
             onLogin = { isAuthenticated = true },
             onGoogleLogin = { isAuthenticated = true },
             onAppleLogin = { isAuthenticated = true },
