@@ -1,6 +1,6 @@
 # SequoHub
 
-SequoHub is the mobile operating app for Sequo Point de Relai partners: local shops that act as pickup points, missed-delivery fallback locations, return drop-off counters, and short-term package storage hubs.
+SequoHub is the mobile operating app for Sequo relay point partners: local shops that act as pickup points, missed-delivery fallback locations, return drop-off counters, and short-term package storage hubs.
 
 This repository is focused on the hub/relay workflow. It is not the full Sequo marketplace, rider app, merchant app, or admin back office, although it must integrate cleanly with those systems.
 
@@ -10,13 +10,13 @@ The legacy Sequo documentation described a broader Lome marketplace with merchan
 
 | Area | SequoHub rule |
 | --- | --- |
-| Hub purpose | Local shop partners operate as Points de Relai and package storage hubs. |
+| Hub purpose | Local shop partners operate as relay points and package storage hubs. |
 | Physical storage | Default hub layout is a 5x5 wooden locker box with 25 numbered lockers. |
 | Handover verification | Package release requires a generated numeric code or QR scan plus customer ID verification. |
-| Missed home delivery | Non-perishable packages can be rerouted to the nearest eligible Point de Relai. Food and perishable items are excluded. |
+| Missed home delivery | Non-perishable packages can be rerouted to the nearest eligible relay point. Food and perishable items are excluded. |
 | Storage penalties | Packages held longer than 2 weeks accrue extra storage fees. |
 | Uncollected packages | After 1 month by default, configurable by Admin, uncollected packages are returned to the seller. |
-| Customer returns | Customers can drop off returns at a Point de Relai within 72 hours of delivery. |
+| Customer returns | Customers can drop off returns at a relay point within 72 hours of delivery. |
 | Refund control | Hubs receive returns only. Sequo collects returned items and performs final validation before refund processing. |
 
 ## Product Scope
@@ -47,7 +47,7 @@ SequoHub lets a partner shop do a small set of operational tasks reliably:
 
 | Object | Description |
 | --- | --- |
-| `hub_id` | Unique ID for the Point de Relai partner location. |
+| `hub_id` | Unique ID for the relay point partner location. |
 | `locker_id` | Physical locker position, using `A01` through `E05` by default for a 5x5 box. |
 | `package_id` | Unique package reference from Sequo backend. |
 | `pickup_code` | Generated numeric code used for pickup validation. |
@@ -76,7 +76,7 @@ The customer presents a QR code or numeric pickup code. Hub staff verifies the c
 
 ### 3. Plan B Missed Delivery
 
-When a customer is not home, Sequo can reroute non-perishable packages to the nearest eligible Point de Relai with available locker capacity. Food, hot meals, refrigerated products, fragile perishables, or other blocked categories must not be rerouted to a hub.
+When a customer is not home, Sequo can reroute non-perishable packages to the nearest eligible relay point with available locker capacity. Food, hot meals, refrigerated products, fragile perishables, or other blocked categories must not be rerouted to a hub.
 
 ### 4. Storage Penalty Processing
 
