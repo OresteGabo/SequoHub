@@ -645,11 +645,20 @@ private fun LanguageFlagSwitch(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                FlagIcon(flag = LanguageFlag.French, dimmed = useEnglish)
-                FlagIcon(flag = LanguageFlag.British, dimmed = !useEnglish)
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    FlagIcon(flag = LanguageFlag.French, dimmed = useEnglish)
+                }
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    FlagIcon(flag = LanguageFlag.British, dimmed = !useEnglish)
+                }
             }
             Surface(
                 modifier = Modifier.size(36.dp),
