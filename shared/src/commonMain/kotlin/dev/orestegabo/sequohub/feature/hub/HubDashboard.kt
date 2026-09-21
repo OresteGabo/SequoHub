@@ -1,6 +1,7 @@
 package dev.orestegabo.sequohub.feature.hub
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,9 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -446,6 +451,14 @@ private fun LockerCell(
     }
 
     val depthColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (hubBlockedBySequo) 0.14f else 0.24f)
+    val panelBorderColor = if (isMaintenance || hubBlockedBySequo) {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+    } else {
+        status.border
+    }
+    val doorHighlightColor = Color.White.copy(alpha = if (hubBlockedBySequo) 0.16f else 0.30f)
+    val doorShadeColor = Color.Black.copy(alpha = if (hubBlockedBySequo) 0.12f else 0.18f)
+    val hardwareColor = contentColor.copy(alpha = if (hubBlockedBySequo) 0.26f else 0.44f)
 
     Box(
         modifier = modifier
@@ -470,66 +483,132 @@ private fun LockerCell(
                 .clip(SequoHubShapes.Small),
             shape = SequoHubShapes.Small,
             color = if (isMaintenance) MaterialTheme.colorScheme.surface else backgroundColor,
-            border = BorderStroke(
-                1.dp,
-                if (isMaintenance || hubBlockedBySequo) {
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                } else {
-                    status.border
-                },
-            ),
+            border = BorderStroke(1.dp, panelBorderColor),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 if (!isMaintenance) {
-                    val highlightAlpha = if (hubBlockedBySequo) 0.14f else 0.26f
-                    val shadeAlpha = if (hubBlockedBySequo) 0.10f else 0.16f
-                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
+                        val inset = 5.dp.toPx()
+                        val panelTopLeft = Offset(inset, inset)
+                        val panelSize = Size(size.width - inset * 2f, size.height - inset * 2f)
+
                         drawRect(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = highlightAlpha),
+                                    doorHighlightColor,
                                     Color.Transparent,
                                 ),
                                 startY = 0f,
-                                endY = size.height * 0.58f,
-                            ),
-                        )
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = highlightAlpha * 0.68f),
-                                    Color.Transparent,
-                                ),
-                                startX = 0f,
-                                endX = size.width * 0.56f,
+                                endY = size.height * 0.48f,
                             ),
                         )
                         drawRect(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.Black.copy(alpha = shadeAlpha),
+                                    doorShadeColor,
                                 ),
-                                startY = size.height * 0.46f,
+                                startY = size.height * 0.52f,
                                 endY = size.height,
                             ),
                         )
-                        drawRect(
+
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = if (hubBlockedBySequo) 0.10f else 0.18f),
+                            topLeft = panelTopLeft,
+                            size = panelSize,
+                            cornerRadius = cornerRadius,
+                            style = Stroke(width = 1.dp.toPx()),
+                        )
+                        drawRoundRect(
+                            color = panelBorderColor.copy(alpha = 0.42f),
+                            topLeft = panelTopLeft,
+                            size = panelSize,
+                            cornerRadius = cornerRadius,
+                            style = Stroke(width = 1.dp.toPx()),
+                        )
+
+                        listOf(0.28f, 0.72f).forEach { yRatio ->
+                            drawRoundRect(
+                                color = Color.Black.copy(alpha = if (hubBlockedBySequo) 0.10f else 0.18f),
+                                topLeft = Offset(6.dp.toPx(), size.height * yRatio - 2.dp.toPx()),
+                                size = Size(3.dp.toPx(), 8.dp.toPx()),
+                                cornerRadius = CornerRadius(1.5.dp.toPx(), 1.5.dp.toPx()),
+                            )
+                            drawRoundRect(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.34f),
+                                        hardwareColor.copy(alpha = 0.54f),
+                                        Color.Black.copy(alpha = 0.16f),
+                                    ),
+                                ),
+                                topLeft = Offset(5.dp.toPx(), size.height * yRatio - 3.dp.toPx()),
+                                size = Size(2.dp.toPx(), 6.dp.toPx()),
+                                cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx()),
+                            )
+                        }
+                        drawRoundRect(
+                            color = Color.Black.copy(alpha = if (hubBlockedBySequo) 0.10f else 0.18f),
+                            topLeft = Offset(size.width - 11.dp.toPx(), size.height * 0.48f + 1.dp.toPx()),
+                            size = Size(4.dp.toPx(), 13.dp.toPx()),
+                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                        )
+                        drawCircle(
+                            color = Color.Black.copy(alpha = if (hubBlockedBySequo) 0.10f else 0.18f),
+                            radius = 2.4.dp.toPx(),
+                            center = Offset(size.width - 9.dp.toPx(), size.height * 0.38f + 1.dp.toPx()),
+                        )
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.44f),
+                                    hardwareColor.copy(alpha = 0.72f),
+                                    Color.Black.copy(alpha = 0.18f),
+                                ),
+                                center = Offset(size.width - 10.dp.toPx(), size.height * 0.38f),
+                                radius = 4.dp.toPx(),
+                            ),
+                            radius = 2.4.dp.toPx(),
+                            center = Offset(size.width - 10.dp.toPx(), size.height * 0.38f),
+                        )
+                        drawRoundRect(
                             brush = Brush.horizontalGradient(
                                 colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = shadeAlpha * 0.78f),
+                                    Color.White.copy(alpha = 0.38f),
+                                    hardwareColor,
+                                    Color.Black.copy(alpha = 0.22f),
                                 ),
-                                startX = size.width * 0.48f,
-                                endX = size.width,
                             ),
+                            topLeft = Offset(size.width - 12.dp.toPx(), size.height * 0.48f),
+                            size = Size(4.dp.toPx(), 13.dp.toPx()),
+                            cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx()),
+                        )
+                        drawLine(
+                            color = hardwareColor.copy(alpha = 0.72f),
+                            start = Offset(size.width - 10.dp.toPx(), size.height * 0.55f),
+                            end = Offset(size.width - 10.dp.toPx(), size.height * 0.72f),
+                            strokeWidth = 1.dp.toPx(),
+                        )
+                        drawLine(
+                            color = Color.White.copy(alpha = if (hubBlockedBySequo) 0.12f else 0.22f),
+                            start = Offset(inset + 3.dp.toPx(), inset + 6.dp.toPx()),
+                            end = Offset(size.width - inset - 10.dp.toPx(), inset + 6.dp.toPx()),
+                            strokeWidth = 1.dp.toPx(),
+                        )
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.20f),
+                            start = Offset(size.width - 13.dp.toPx(), size.height * 0.48f + 1.dp.toPx()),
+                            end = Offset(size.width - 13.dp.toPx(), size.height * 0.48f + 12.dp.toPx()),
+                            strokeWidth = 1.dp.toPx(),
                         )
                     }
                 }
 
                 if (isMaintenance) {
                     val outlineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
-                    androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
                         val w = size.width
                         val h = size.height
 
@@ -560,12 +639,12 @@ private fun LockerCell(
                         drawPath(
                             path = leftHalfPath,
                             color = outlineColor,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+                            style = Stroke(width = 1.dp.toPx()),
                         )
                         drawPath(
                             path = rightHalfPath,
                             color = outlineColor,
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+                            style = Stroke(width = 1.dp.toPx()),
                         )
                     }
 
