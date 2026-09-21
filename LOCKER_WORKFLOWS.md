@@ -4,7 +4,7 @@ This document defines the operational workflows for SequoHub partner shops that 
 
 ## Operating Principles
 
-- A hub is a local shop partner acting as a Point de Relai and package storage hub.
+- A hub is a local shop partner acting as a relay point and package storage hub.
 - Every package must be linked to a backend-generated `package_id`.
 - Every physical placement must be linked to one `locker_id`.
 - A package cannot be released without a valid QR scan or generated numeric code plus customer ID verification.
@@ -149,7 +149,7 @@ Plan B applies when a home delivery attempt fails because the customer is not av
 
 ### Eligibility
 
-A package can be rerouted to a Point de Relai only when all conditions are true:
+A package can be rerouted to a relay point only when all conditions are true:
 
 - The delivery attempt was recorded by a Sequo rider or system.
 - The customer was not home, unreachable, or unable to receive the package.
@@ -163,7 +163,7 @@ A package can be rerouted to a Point de Relai only when all conditions are true:
 
 1. Rider marks `customer_not_home`.
 2. Backend checks Plan B eligibility.
-3. Backend finds the nearest eligible Point de Relai with capacity.
+3. Backend finds the nearest eligible relay point with capacity.
 4. Rider receives reroute destination and package drop-off QR.
 5. Hub staff scans rider drop-off QR or package QR.
 6. App clearly labels the package as `Plan B missed delivery`.
