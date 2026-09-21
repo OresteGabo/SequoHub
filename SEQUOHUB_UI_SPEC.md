@@ -1,6 +1,6 @@
 # SequoHub UI Specification
 
-This file defines the first mobile interface direction for SequoHub, a Point de Relai app for partner shop
+This file defines the first mobile interface direction for SequoHub, a relay point app for partner shop
 operators. The interface must stay fast, guided, and minimal: scan first, short code fallback second, and no
 manual logistics decisions by shop staff.
 
