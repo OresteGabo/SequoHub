@@ -29,14 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -63,8 +59,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -108,6 +102,8 @@ fun AuthScreen(
             EmailFallbackPage(
                 onBack = { showEmailFallback = false },
                 onLogin = onLogin,
+                onGoogleLogin = onGoogleLogin,
+                onAppleLogin = onAppleLogin,
                 onPrivacyTermsClick = onPrivacyTermsClick,
             )
         } else {
@@ -262,43 +258,25 @@ private data class OnboardingSlide(
 private fun EmailFallbackPage(
     onBack: () -> Unit,
     onLogin: () -> Unit,
+    onGoogleLogin: () -> Unit,
+    onAppleLogin: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
 ) {
     var authMode by rememberSaveable { mutableStateOf(AuthMode.SignIn) }
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var fullName by rememberSaveable { mutableStateOf("") }
-    var confirmPassword by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
     val isSignUp = authMode == AuthMode.SignUp
     val emailError = emailValidationError(email)
-    val passwordMissing = passwordMissingRequirements(password)
-    val signUpPasswordHelper = if (password.isBlank()) {
-        "Use 8+ characters with uppercase, lowercase, and a number."
-    } else if (passwordMissing.isNotEmpty()) {
-        "Missing ${passwordMissing.joinToString(", ")}."
-    } else {
-        "Password looks strong enough."
-    }
-    val fullNameError = if (isSignUp && fullName.isNotBlank() && fullName.trim().length < 2) {
-        "Enter your full name."
-    } else {
-        null
-    }
-    val confirmPasswordError = if (isSignUp && confirmPassword.isNotBlank() && confirmPassword != password) {
-        "Passwords do not match."
-    } else {
-        null
-    }
-    val canContinue = if (isSignUp) {
-        fullName.trim().length >= 2 &&
-            email.isNotBlank() &&
-            emailError == null &&
-            passwordMissing.isEmpty() &&
-            confirmPassword == password
-    } else {
-        email.isNotBlank() && emailError == null && password.isNotBlank()
+    val provider = authProviderForEmail(email)
+    val canContinue = email.isNotBlank() && emailError == null
+    val providerHint = when (provider) {
+        AuthProvider.Google -> "Gmail accounts continue securely with Google."
+        AuthProvider.Apple -> "iCloud, Me, and Mac accounts continue securely with Apple."
+        AuthProvider.Email -> if (isSignUp) {
+            "We will start account setup for this email."
+        } else {
+            "We will continue with email for this account."
+        }
     }
 
     Column(
@@ -334,16 +312,16 @@ private fun EmailFallbackPage(
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = if (isSignUp) "Create your account" else "Email sign in",
+                    text = if (isSignUp) "Create your account" else "Find your account",
                     color = colorScheme.onBackground,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = if (isSignUp) {
-                        "Set up a relay account for teams that cannot use Apple or Google."
+                        "Enter your email and we will route you to the safest sign-up method."
                     } else {
-                        "Use your relay account when Apple or Google is unavailable."
+                        "Enter your email and we will route you to the right sign-in method."
                     },
                     color = colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
@@ -353,33 +331,6 @@ private fun EmailFallbackPage(
             Spacer(modifier = Modifier.size(20.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (isSignUp) {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = fullName,
-                        onValueChange = { fullName = it },
-                        singleLine = true,
-                        label = { Text("Full name") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = null,
-                                tint = colorScheme.primary,
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Words,
-                            keyboardType = KeyboardType.Text,
-                        ),
-                        isError = fullNameError != null,
-                        supportingText = {
-                            Text(fullNameError ?: "Use the name your hub team recognizes.")
-                        },
-                        shape = SequoHubShapes.Small,
-                        colors = emailFieldColors(),
-                    )
-                }
-
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = email,
@@ -399,104 +350,22 @@ private fun EmailFallbackPage(
                     ),
                     isError = emailError != null,
                     supportingText = {
-                        Text(emailError ?: "Example: operator@sequohub.com")
+                        Text(emailError ?: providerHint)
                     },
                     shape = SequoHubShapes.Small,
                     colors = emailFieldColors(),
                 )
-
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = password,
-                    onValueChange = { password = it },
-                    singleLine = true,
-                    label = { Text("Password") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Lock,
-                            contentDescription = null,
-                            tint = colorScheme.primary,
-                        )
-                    },
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password",
-                            )
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.None,
-                        keyboardType = KeyboardType.Password,
-                    ),
-                    visualTransformation = if (passwordVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    isError = isSignUp && password.isNotBlank() && passwordMissing.isNotEmpty(),
-                    supportingText = if (isSignUp) {
-                        { Text(signUpPasswordHelper) }
-                    } else {
-                        null
-                    },
-                    shape = SequoHubShapes.Small,
-                    colors = emailFieldColors(),
-                )
-
-                if (isSignUp) {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        singleLine = true,
-                        label = { Text("Confirm password") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Lock,
-                                contentDescription = null,
-                                tint = colorScheme.primary,
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.None,
-                            keyboardType = KeyboardType.Password,
-                        ),
-                        visualTransformation = if (passwordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        isError = confirmPasswordError != null,
-                        supportingText = {
-                            Text(confirmPasswordError ?: "Re-enter the same password.")
-                        },
-                        shape = SequoHubShapes.Small,
-                        colors = emailFieldColors(),
-                    )
-                }
 
                 Spacer(modifier = Modifier.size(2.dp))
 
-                Button(
-                    onClick = onLogin,
+                AuthProviderActionButton(
+                    provider = provider,
+                    mode = authMode,
                     enabled = canContinue,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = SequoHubShapes.Small,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colorScheme.primary,
-                        contentColor = colorScheme.onPrimary,
-                    ),
-                ) {
-                    Text(
-                        text = if (isSignUp) "Create account" else "Continue",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                    onEmail = onLogin,
+                    onGoogle = onGoogleLogin,
+                    onApple = onAppleLogin,
+                )
 
                 Text(
                     text = "Back to Apple or Google",
@@ -561,6 +430,69 @@ private fun AuthModeTabs(
 }
 
 @Composable
+private fun AuthProviderActionButton(
+    provider: AuthProvider,
+    mode: AuthMode,
+    enabled: Boolean,
+    onEmail: () -> Unit,
+    onGoogle: () -> Unit,
+    onApple: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val label = when (provider) {
+        AuthProvider.Google -> "Continue with Google"
+        AuthProvider.Apple -> "Continue with Apple"
+        AuthProvider.Email -> if (mode == AuthMode.SignUp) "Continue with email" else "Continue"
+    }
+    val icon = when (provider) {
+        AuthProvider.Google -> GoogleIcon
+        AuthProvider.Apple -> AppleIcon
+        AuthProvider.Email -> Icons.Filled.AlternateEmail
+    }
+    val onClick = when (provider) {
+        AuthProvider.Google -> onGoogle
+        AuthProvider.Apple -> onApple
+        AuthProvider.Email -> onEmail
+    }
+    val containerColor = when (provider) {
+        AuthProvider.Apple -> Color(0xFF090A0C)
+        else -> colorScheme.primary
+    }
+    val contentColor = when (provider) {
+        AuthProvider.Apple -> Color.White
+        else -> colorScheme.onPrimary
+    }
+
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = SequoHubShapes.Small,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+        ),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (provider == AuthProvider.Google) Color.Unspecified else contentColor,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 private fun EmailHeader(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     Row(
@@ -613,6 +545,12 @@ private enum class AuthMode(val label: String) {
     SignUp("Sign up"),
 }
 
+private enum class AuthProvider {
+    Email,
+    Google,
+    Apple,
+}
+
 private fun emailValidationError(email: String): String? {
     if (email.isBlank()) return null
     val trimmed = email.trim()
@@ -626,13 +564,14 @@ private fun emailValidationError(email: String): String? {
     return if (isValid) null else "Enter a valid email address."
 }
 
-private fun passwordMissingRequirements(password: String): List<String> {
-    if (password.isBlank()) return listOf("8+ characters", "uppercase", "lowercase", "a number")
-    return buildList {
-        if (password.length < 8) add("8+ characters")
-        if (password.none { it.isUpperCase() }) add("uppercase")
-        if (password.none { it.isLowerCase() }) add("lowercase")
-        if (password.none { it.isDigit() }) add("a number")
+private fun authProviderForEmail(email: String): AuthProvider {
+    val domain = email.trim()
+        .lowercase()
+        .substringAfter('@', missingDelimiterValue = "")
+    return when (domain) {
+        "gmail.com", "googlemail.com" -> AuthProvider.Google
+        "icloud.com", "me.com", "mac.com" -> AuthProvider.Apple
+        else -> AuthProvider.Email
     }
 }
 
