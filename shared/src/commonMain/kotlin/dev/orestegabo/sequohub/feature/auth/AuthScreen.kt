@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.component.Package2
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
+import dev.orestegabo.sequohub.feature.settings.AppLanguage
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import sequohub.shared.generated.resources.Res
@@ -71,9 +72,13 @@ import sequohub.shared.generated.resources.auth_fingerprint
 import sequohub.shared.generated.resources.onboarding_history
 import sequohub.shared.generated.resources.onboarding_pickup_flow
 import sequohub.shared.generated.resources.onboarding_scan_arrivals
+import sequohub.shared.generated.resources.sequohub_logo_mark
+import sequohub.shared.generated.resources.sequohub_logo_text
 
 @Composable
 fun AuthScreen(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     onLogin: () -> Unit,
     onGoogleLogin: () -> Unit,
     onAppleLogin: () -> Unit,
@@ -100,6 +105,8 @@ fun AuthScreen(
 
         if (showEmailFallback) {
             EmailFallbackPage(
+                language = language,
+                onLanguageChange = onLanguageChange,
                 onBack = { showEmailFallback = false },
                 onLogin = onLogin,
                 onGoogleLogin = onGoogleLogin,
@@ -108,6 +115,8 @@ fun AuthScreen(
             )
         } else {
             SocialAuthPage(
+                language = language,
+                onLanguageChange = onLanguageChange,
                 onAppleLogin = onAppleLogin,
                 onGoogleLogin = onGoogleLogin,
                 onEmailFallback = { showEmailFallback = true },
@@ -119,6 +128,8 @@ fun AuthScreen(
 
 @Composable
 private fun SocialAuthPage(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     onAppleLogin: () -> Unit,
     onGoogleLogin: () -> Unit,
     onEmailFallback: () -> Unit,
@@ -134,7 +145,10 @@ private fun SocialAuthPage(
             .padding(top = 22.dp, bottom = 22.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        BrandMark()
+        BrandMark(
+            language = language,
+            onLanguageChange = onLanguageChange,
+        )
 
         Column(verticalArrangement = Arrangement.Bottom) {
             OnboardingPager()
@@ -165,8 +179,8 @@ private fun SocialAuthPage(
 private fun OnboardingPager() {
     val slides = listOf(
         OnboardingSlide(
-            title = "Scan every colis",
-            subtitle = "New seller drop-offs, livreur arrivals, customer pickups, and returns all start from one QR scan.",
+            title = "Scan every package",
+            subtitle = "New seller drop-offs, courier arrivals, customer pickups, and returns all start from one QR scan.",
             illustration = Res.drawable.onboarding_scan_arrivals,
         ),
         OnboardingSlide(
@@ -256,6 +270,8 @@ private data class OnboardingSlide(
 
 @Composable
 private fun EmailFallbackPage(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     onBack: () -> Unit,
     onLogin: () -> Unit,
     onGoogleLogin: () -> Unit,
@@ -289,7 +305,11 @@ private fun EmailFallbackPage(
             .padding(top = 20.dp, bottom = 22.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        EmailHeader(onBack = onBack)
+        EmailHeader(
+            language = language,
+            onLanguageChange = onLanguageChange,
+            onBack = onBack,
+        )
 
         Column(verticalArrangement = Arrangement.Bottom) {
             Image(
@@ -493,41 +513,55 @@ private fun AuthProviderActionButton(
 }
 
 @Composable
-private fun EmailHeader(onBack: () -> Unit) {
+private fun EmailHeader(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+    onBack: () -> Unit,
+) {
     val colorScheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(
-            modifier = Modifier.size(48.dp),
-            onClick = onBack,
-            shape = SequoHubShapes.Card,
-            color = colorScheme.primary,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp),
+            Surface(
+                modifier = Modifier.size(48.dp),
+                onClick = onBack,
+                shape = SequoHubShapes.Card,
+                color = colorScheme.primary,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                SequoHubWordmark(
+                    modifier = Modifier
+                        .width(138.dp)
+                        .height(30.dp),
+                )
+                Text(
+                    text = "Relay counter",
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
         }
-        Column {
-            Text(
-                text = "SequoHub",
-                color = colorScheme.onBackground,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Relay counter",
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
+        LanguageFlagSwitch(
+            language = language,
+            onLanguageChange = onLanguageChange,
+        )
     }
 }
 
@@ -576,9 +610,11 @@ private fun authProviderForEmail(email: String): AuthProvider {
 }
 
 @Composable
-private fun BrandMark() {
+private fun BrandMark(
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+) {
     val colorScheme = MaterialTheme.colorScheme
-    var useEnglish by rememberSaveable { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -588,26 +624,18 @@ private fun BrandMark() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = SequoHubShapes.Card,
-                color = colorScheme.primary,
+            SequoHubMark(
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(56.dp),
+            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Filled.Package2,
-                        contentDescription = null,
-                        tint = colorScheme.onPrimary,
-                        modifier = Modifier.size(28.dp),
-                    )
-                }
-            }
-            Column {
-                Text(
-                    text = "SequoHub",
-                    color = colorScheme.onBackground,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                SequoHubWordmark(
+                    modifier = Modifier
+                        .width(146.dp)
+                        .height(32.dp),
                 )
                 Text(
                     text = "Relay counter",
@@ -617,23 +645,52 @@ private fun BrandMark() {
             }
         }
         LanguageFlagSwitch(
-            useEnglish = useEnglish,
-            onToggle = { useEnglish = !useEnglish },
+            language = language,
+            onLanguageChange = onLanguageChange,
         )
     }
 }
 
 @Composable
+private fun SequoHubMark(modifier: Modifier = Modifier) {
+    Image(
+        painter = painterResource(Res.drawable.sequohub_logo_mark),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SequoHubWordmark(modifier: Modifier = Modifier) {
+    Image(
+        painter = painterResource(Res.drawable.sequohub_logo_text),
+        contentDescription = "SequoHub",
+        contentScale = ContentScale.Fit,
+        modifier = modifier,
+    )
+}
+
+@Composable
 private fun LanguageFlagSwitch(
-    useEnglish: Boolean,
-    onToggle: () -> Unit,
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val useEnglish = language == AppLanguage.English
     Surface(
         modifier = Modifier
             .width(82.dp)
             .height(44.dp),
-        onClick = onToggle,
+        onClick = {
+            onLanguageChange(
+                if (useEnglish) {
+                    AppLanguage.French
+                } else {
+                    AppLanguage.English
+                },
+            )
+        },
         shape = SequoHubShapes.NavItem,
         color = colorScheme.surface.copy(alpha = 0.88f),
         border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.68f)),
