@@ -1,13 +1,13 @@
 # Returns Handling
 
-This document defines how SequoHub handles customer return drop-offs at Points de Relai.
+This document defines how SequoHub handles customer return drop-offs at relay points.
 
 ## Policy Summary
 
 | Rule | SequoHub requirement |
 | --- | --- |
 | Return window | Customer can drop off a return within 72 hours of delivery. |
-| Drop-off location | Point de Relai only, unless Support/Admin creates an exception. |
+| Drop-off location | Relay point only, unless Support/Admin creates an exception. |
 | Verification | Return QR or numeric return code plus customer ID verification. |
 | Hub responsibility | Receive, identify, inspect external condition, store, and hand over to Sequo. |
 | Refund authority | Sequo performs final validation before refund processing. |
@@ -48,7 +48,7 @@ Eligibility is determined by the backend. The hub app should not let staff manua
 | `delivered` | Customer received the original package. |
 | `return_requested` | Customer initiated a return request. |
 | `return_authorized` | Backend issued `return_id`, QR token, and numeric code. |
-| `return_dropoff_pending` | Customer must bring package to a Point de Relai within 72 hours. |
+| `return_dropoff_pending` | Customer must bring package to a relay point within 72 hours. |
 | `return_received_at_hub` | Hub accepted and stored the return. |
 | `awaiting_sequo_collection` | Return is waiting for Sequo pickup. |
 | `collected_by_sequo` | Sequo agent collected the return from the hub. |
@@ -67,7 +67,7 @@ Required customer steps:
 1. Open delivered order.
 2. Select eligible item or order return.
 3. Choose return reason.
-4. Confirm drop-off at Point de Relai.
+4. Confirm drop-off at relay point.
 5. Select preferred refund method if required.
 6. Receive:
    - `return_id`
