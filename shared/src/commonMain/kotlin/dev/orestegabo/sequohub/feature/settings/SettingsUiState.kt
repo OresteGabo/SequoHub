@@ -15,7 +15,7 @@ enum class AppLanguage(val label: String, val code: String) {
 data class SettingsUiState(
     val hubName: String = "Lomé Relay 04",
     val staffName: String = "Counter staff",
-    val staffRole: String = "Point de Relai operator",
+    val staffRole: String = "Relay point operator",
     val themeMode: ThemeMode = ThemeMode.System,
     val language: AppLanguage = AppLanguage.French,
     val quickScanOnOpen: Boolean = true,
