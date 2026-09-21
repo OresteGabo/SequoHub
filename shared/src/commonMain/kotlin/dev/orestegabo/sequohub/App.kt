@@ -35,6 +35,7 @@ import dev.orestegabo.sequohub.feature.legal.LegalScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsUiState
 import dev.orestegabo.sequohub.feature.settings.ThemeMode
+import dev.orestegabo.sequohub.feature.splash.SplashScreen
 import dev.orestegabo.sequohub.navigation.MainTab
 import dev.orestegabo.sequohub.navigation.SequoBottomNavigation
 
@@ -64,6 +65,7 @@ private fun SequoHubApp(
     settings: SettingsUiState,
     onSettingsChange: (SettingsUiState) -> Unit,
 ) {
+    var showSplash by rememberSaveable { mutableStateOf(true) }
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
     var showLegalScreen by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
@@ -72,6 +74,11 @@ private fun SequoHubApp(
     val lockers = sampleLockers(strings)
     val hubBlockedBySequo = false
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
+
+    if (showSplash) {
+        SplashScreen(onTimeout = { showSplash = false })
+        return
+    }
 
     if (!isAuthenticated) {
         if (showLegalScreen) {
