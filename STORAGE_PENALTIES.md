@@ -1,6 +1,6 @@
 # Storage Penalties
 
-This document defines how SequoHub calculates package storage age, extra storage fees, overdue alerts, and return-to-seller handling for uncollected packages at Points de Relai.
+This document defines how SequoHub calculates package storage age, extra storage fees, overdue alerts, and return-to-seller handling for uncollected packages at relay points.
 
 ## Policy Summary
 
