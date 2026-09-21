@@ -1,6 +1,7 @@
 package dev.orestegabo.sequohub.feature.auth
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -38,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +50,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -67,6 +73,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import sequohub.shared.generated.resources.Res
+import sequohub.shared.generated.resources.auth_fingerprint
 import sequohub.shared.generated.resources.onboarding_history
 import sequohub.shared.generated.resources.onboarding_pickup_flow
 import sequohub.shared.generated.resources.onboarding_scan_arrivals
@@ -133,25 +140,27 @@ private fun SocialAuthPage(
     ) {
         BrandMark()
 
-        OnboardingPager()
+        Column(verticalArrangement = Arrangement.Bottom) {
+            OnboardingPager()
+            Spacer(modifier = Modifier.size(24.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                AppleButton(onClick = onAppleLogin)
+                GoogleButton(onClick = onGoogleLogin)
 
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            AppleButton(onClick = onAppleLogin)
-            GoogleButton(onClick = onGoogleLogin)
+                Text(
+                    text = "Use email instead",
+                    color = colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onEmailFallback)
+                        .padding(top = 2.dp, bottom = 6.dp),
+                )
 
-            Text(
-                text = "Use email instead",
-                color = colorScheme.primary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onEmailFallback)
-                    .padding(top = 2.dp, bottom = 6.dp),
-            )
-
-            TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
+                TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
+            }
         }
     }
 }
@@ -255,10 +264,42 @@ private fun EmailFallbackPage(
     onLogin: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
 ) {
+    var authMode by rememberSaveable { mutableStateOf(AuthMode.SignIn) }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var fullName by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
+    val isSignUp = authMode == AuthMode.SignUp
+    val emailError = emailValidationError(email)
+    val passwordMissing = passwordMissingRequirements(password)
+    val signUpPasswordHelper = if (password.isBlank()) {
+        "Use 8+ characters with uppercase, lowercase, and a number."
+    } else if (passwordMissing.isNotEmpty()) {
+        "Missing ${passwordMissing.joinToString(", ")}."
+    } else {
+        "Password looks strong enough."
+    }
+    val fullNameError = if (isSignUp && fullName.isNotBlank() && fullName.trim().length < 2) {
+        "Enter your full name."
+    } else {
+        null
+    }
+    val confirmPasswordError = if (isSignUp && confirmPassword.isNotBlank() && confirmPassword != password) {
+        "Passwords do not match."
+    } else {
+        null
+    }
+    val canContinue = if (isSignUp) {
+        fullName.trim().length >= 2 &&
+            email.isNotBlank() &&
+            emailError == null &&
+            passwordMissing.isEmpty() &&
+            confirmPassword == password
+    } else {
+        email.isNotBlank() && emailError == null && password.isNotBlank()
+    }
 
     Column(
         modifier = Modifier
@@ -266,58 +307,102 @@ private fun EmailFallbackPage(
             .safeContentPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 22.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+            .padding(horizontal = 24.dp)
+            .padding(top = 20.dp, bottom = 22.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
     ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = colorScheme.onBackground,
-            )
-        }
+        EmailHeader(onBack = onBack)
 
-        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text(
-                text = "Email sign in",
-                color = colorScheme.onBackground,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
+        Column(verticalArrangement = Arrangement.Bottom) {
+            Image(
+                painter = painterResource(Res.drawable.auth_fingerprint),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(164.dp),
+                contentScale = ContentScale.Fit,
             )
-            Text(
-                text = "Only use this if Apple or Google is unavailable.",
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = SequoHubShapes.Card,
-            color = colorScheme.surface.copy(alpha = 0.92f),
-            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.64f)),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
+            Spacer(modifier = Modifier.size(18.dp))
+
+            AuthModeTabs(
+                selectedMode = authMode,
+                onModeSelected = { authMode = it },
+            )
+
+            Spacer(modifier = Modifier.size(18.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = if (isSignUp) "Create your account" else "Email sign in",
+                    color = colorScheme.onBackground,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = if (isSignUp) {
+                        "Set up a relay account for teams that cannot use Apple or Google."
+                    } else {
+                        "Use your relay account when Apple or Google is unavailable."
+                    },
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            Spacer(modifier = Modifier.size(20.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                if (isSignUp) {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = fullName,
+                        onValueChange = { fullName = it },
+                        singleLine = true,
+                        label = { Text("Full name") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Words,
+                            keyboardType = KeyboardType.Text,
+                        ),
+                        isError = fullNameError != null,
+                        supportingText = {
+                            Text(fullNameError ?: "Use the name your hub team recognizes.")
+                        },
+                        shape = SequoHubShapes.Small,
+                        colors = emailFieldColors(),
+                    )
+                }
+
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = { email = it.trim() },
                     singleLine = true,
                     label = { Text("Email address") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.AlternateEmail,
                             contentDescription = null,
+                            tint = colorScheme.primary,
                         )
                     },
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.None,
                         keyboardType = KeyboardType.Email,
                     ),
+                    isError = emailError != null,
+                    supportingText = {
+                        Text(emailError ?: "Example: operator@sequohub.com")
+                    },
                     shape = SequoHubShapes.Small,
+                    colors = emailFieldColors(),
                 )
 
                 OutlinedTextField(
@@ -330,6 +415,7 @@ private fun EmailFallbackPage(
                         Icon(
                             imageVector = Icons.Filled.Lock,
                             contentDescription = null,
+                            tint = colorScheme.primary,
                         )
                     },
                     trailingIcon = {
@@ -349,12 +435,53 @@ private fun EmailFallbackPage(
                     } else {
                         PasswordVisualTransformation()
                     },
+                    isError = isSignUp && password.isNotBlank() && passwordMissing.isNotEmpty(),
+                    supportingText = if (isSignUp) {
+                        { Text(signUpPasswordHelper) }
+                    } else {
+                        null
+                    },
                     shape = SequoHubShapes.Small,
+                    colors = emailFieldColors(),
                 )
+
+                if (isSignUp) {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        singleLine = true,
+                        label = { Text("Confirm password") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.None,
+                            keyboardType = KeyboardType.Password,
+                        ),
+                        visualTransformation = if (passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        isError = confirmPasswordError != null,
+                        supportingText = {
+                            Text(confirmPasswordError ?: "Re-enter the same password.")
+                        },
+                        shape = SequoHubShapes.Small,
+                        colors = emailFieldColors(),
+                    )
+                }
+
+                Spacer(modifier = Modifier.size(2.dp))
 
                 Button(
                     onClick = onLogin,
-                    enabled = email.isNotBlank() && password.length >= 6,
+                    enabled = canContinue,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
@@ -365,36 +492,94 @@ private fun EmailFallbackPage(
                     ),
                 ) {
                     Text(
-                        text = "Continue",
+                        text = if (isSignUp) "Create account" else "Continue",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                 }
+
+                Text(
+                    text = "Back to Apple or Google",
+                    color = colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onBack)
+                        .padding(vertical = 4.dp),
+                )
+
+                TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
             }
         }
-
-        TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
     }
 }
 
 @Composable
-private fun BrandMark() {
+private fun AuthModeTabs(
+    selectedMode: AuthMode,
+    onModeSelected: (AuthMode) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = SequoHubShapes.NavItem,
+        color = colorScheme.surface.copy(alpha = 0.68f),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.58f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AuthMode.entries.forEach { mode ->
+                val selected = mode == selectedMode
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp),
+                    onClick = { onModeSelected(mode) },
+                    shape = SequoHubShapes.IconCapsule,
+                    color = if (selected) colorScheme.primary else Color.Transparent,
+                    contentColor = if (selected) colorScheme.onPrimary else colorScheme.onSurfaceVariant,
+                    tonalElevation = if (selected) 2.dp else 0.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = mode.label,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmailHeader(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     Row(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             modifier = Modifier.size(48.dp),
+            onClick = onBack,
             shape = SequoHubShapes.Card,
             color = colorScheme.primary,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = Icons.Filled.Package2,
-                    contentDescription = null,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
                     tint = colorScheme.onPrimary,
-                    modifier = Modifier.size(28.dp),
+                    modifier = Modifier.size(24.dp),
                 )
             }
         }
@@ -412,6 +597,218 @@ private fun BrandMark() {
             )
         }
     }
+}
+
+@Composable
+private fun emailFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.74f),
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.92f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest.copy(alpha = 0.78f),
+    cursorColor = MaterialTheme.colorScheme.primary,
+)
+
+private enum class AuthMode(val label: String) {
+    SignIn("Sign in"),
+    SignUp("Sign up"),
+}
+
+private fun emailValidationError(email: String): String? {
+    if (email.isBlank()) return null
+    val trimmed = email.trim()
+    val hasSingleAt = trimmed.count { it == '@' } == 1
+    val domain = trimmed.substringAfter('@', missingDelimiterValue = "")
+    val isValid = hasSingleAt &&
+        trimmed.indexOf('@') > 0 &&
+        domain.contains('.') &&
+        !trimmed.contains(' ') &&
+        domain.substringAfterLast('.').length >= 2
+    return if (isValid) null else "Enter a valid email address."
+}
+
+private fun passwordMissingRequirements(password: String): List<String> {
+    if (password.isBlank()) return listOf("8+ characters", "uppercase", "lowercase", "a number")
+    return buildList {
+        if (password.length < 8) add("8+ characters")
+        if (password.none { it.isUpperCase() }) add("uppercase")
+        if (password.none { it.isLowerCase() }) add("lowercase")
+        if (password.none { it.isDigit() }) add("a number")
+    }
+}
+
+@Composable
+private fun BrandMark() {
+    val colorScheme = MaterialTheme.colorScheme
+    var useEnglish by rememberSaveable { mutableStateOf(false) }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = SequoHubShapes.Card,
+                color = colorScheme.primary,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.Package2,
+                        contentDescription = null,
+                        tint = colorScheme.onPrimary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = "SequoHub",
+                    color = colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Relay counter",
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+        LanguageFlagSwitch(
+            useEnglish = useEnglish,
+            onToggle = { useEnglish = !useEnglish },
+        )
+    }
+}
+
+@Composable
+private fun LanguageFlagSwitch(
+    useEnglish: Boolean,
+    onToggle: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier
+            .width(82.dp)
+            .height(44.dp),
+        onClick = onToggle,
+        shape = SequoHubShapes.NavItem,
+        color = colorScheme.surface.copy(alpha = 0.88f),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.68f)),
+        tonalElevation = 2.dp,
+    ) {
+        Box(
+            modifier = Modifier.padding(4.dp),
+            contentAlignment = if (useEnglish) Alignment.CenterEnd else Alignment.CenterStart,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FlagIcon(flag = LanguageFlag.French, dimmed = useEnglish)
+                FlagIcon(flag = LanguageFlag.British, dimmed = !useEnglish)
+            }
+            Surface(
+                modifier = Modifier.size(36.dp),
+                shape = SequoHubShapes.IconCapsule,
+                color = colorScheme.surface,
+                border = BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.34f)),
+                shadowElevation = 2.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    FlagIcon(
+                        flag = if (useEnglish) LanguageFlag.British else LanguageFlag.French,
+                        dimmed = false,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FlagIcon(
+    flag: LanguageFlag,
+    dimmed: Boolean,
+) {
+    val alpha = if (dimmed) 0.36f else 1f
+    Canvas(
+        modifier = Modifier
+            .size(width = 22.dp, height = 16.dp)
+            .clip(SequoHubShapes.Small),
+    ) {
+        when (flag) {
+            LanguageFlag.French -> {
+                drawRect(Color(0xFF1B3F8B).copy(alpha = alpha), size = Size(size.width / 3f, size.height))
+                drawRect(
+                    Color.White.copy(alpha = alpha),
+                    topLeft = Offset(size.width / 3f, 0f),
+                    size = Size(size.width / 3f, size.height),
+                )
+                drawRect(
+                    Color(0xFFE23D3D).copy(alpha = alpha),
+                    topLeft = Offset(size.width * 2f / 3f, 0f),
+                    size = Size(size.width / 3f, size.height),
+                )
+            }
+            LanguageFlag.British -> {
+                drawRect(Color(0xFF163B7A).copy(alpha = alpha))
+                drawLine(
+                    color = Color.White.copy(alpha = alpha),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, size.height),
+                    strokeWidth = 5.dp.toPx(),
+                )
+                drawLine(
+                    color = Color.White.copy(alpha = alpha),
+                    start = Offset(size.width, 0f),
+                    end = Offset(0f, size.height),
+                    strokeWidth = 5.dp.toPx(),
+                )
+                drawLine(
+                    color = Color(0xFFC8102E).copy(alpha = alpha),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, size.height),
+                    strokeWidth = 2.dp.toPx(),
+                )
+                drawLine(
+                    color = Color(0xFFC8102E).copy(alpha = alpha),
+                    start = Offset(size.width, 0f),
+                    end = Offset(0f, size.height),
+                    strokeWidth = 2.dp.toPx(),
+                )
+                drawRect(
+                    Color.White.copy(alpha = alpha),
+                    topLeft = Offset(size.width / 2f - 2.5.dp.toPx(), 0f),
+                    size = Size(5.dp.toPx(), size.height),
+                )
+                drawRect(
+                    Color.White.copy(alpha = alpha),
+                    topLeft = Offset(0f, size.height / 2f - 2.5.dp.toPx()),
+                    size = Size(size.width, 5.dp.toPx()),
+                )
+                drawRect(
+                    Color(0xFFC8102E).copy(alpha = alpha),
+                    topLeft = Offset(size.width / 2f - 1.4.dp.toPx(), 0f),
+                    size = Size(2.8.dp.toPx(), size.height),
+                )
+                drawRect(
+                    Color(0xFFC8102E).copy(alpha = alpha),
+                    topLeft = Offset(0f, size.height / 2f - 1.4.dp.toPx()),
+                    size = Size(size.width, 2.8.dp.toPx()),
+                )
+            }
+        }
+    }
+}
+
+private enum class LanguageFlag {
+    French,
+    British,
 }
 
 @Composable
