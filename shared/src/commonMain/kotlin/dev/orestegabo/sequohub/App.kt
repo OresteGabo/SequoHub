@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -25,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirstOrNull
+import dev.orestegabo.sequohub.core.auth.AuthApiClient
+import dev.orestegabo.sequohub.core.auth.GoogleSignInResult
 import dev.orestegabo.sequohub.core.network.ApiHealthClient
 import dev.orestegabo.sequohub.core.network.ApiHealthUiState
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
@@ -46,7 +51,11 @@ import kotlinx.coroutines.launch
 
 @Composable
 @Preview
-fun App() {
+fun App(
+    onGoogleSignIn: suspend () -> GoogleSignInResult = {
+        GoogleSignInResult.Failure("Google sign-in is not configured on this platform yet.")
+    },
+) {
     var settings by remember { mutableStateOf(SettingsUiState()) }
     val systemDark = isSystemInDarkTheme()
     val useDarkTheme = when (settings.themeMode) {
@@ -60,6 +69,7 @@ fun App() {
             SequoHubApp(
                 settings = settings,
                 onSettingsChange = { settings = it },
+                onGoogleSignIn = onGoogleSignIn,
             )
         }
     }
@@ -69,13 +79,16 @@ fun App() {
 private fun SequoHubApp(
     settings: SettingsUiState,
     onSettingsChange: (SettingsUiState) -> Unit,
+    onGoogleSignIn: suspend () -> GoogleSignInResult,
 ) {
     var showSplash by rememberSaveable { mutableStateOf(true) }
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
     var showLegalScreen by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
+    var authErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var apiHealthState by remember { mutableStateOf<ApiHealthUiState>(ApiHealthUiState.Idle) }
+    val authApiClient = remember { AuthApiClient() }
     val apiHealthClient = remember { ApiHealthClient() }
     val scope = rememberCoroutineScope()
     val strings = LocalSequoStrings.current
@@ -84,7 +97,10 @@ private fun SequoHubApp(
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
 
     DisposableEffect(apiHealthClient) {
-        onDispose { apiHealthClient.close() }
+        onDispose {
+            authApiClient.close()
+            apiHealthClient.close()
+        }
     }
 
     if (showSplash) {
@@ -100,9 +116,40 @@ private fun SequoHubApp(
                 language = settings.language,
                 onLanguageChange = { onSettingsChange(settings.copy(language = it)) },
                 onLogin = { isAuthenticated = true },
-                onGoogleLogin = { isAuthenticated = true },
+                onGoogleLogin = {
+                    scope.launch {
+                        when (val result = onGoogleSignIn()) {
+                            is GoogleSignInResult.Success -> {
+                                runCatching {
+                                    authApiClient.loginWithGoogle(result.idToken)
+                                }.onSuccess {
+                                    authErrorMessage = null
+                                    isAuthenticated = true
+                                }.onFailure { error ->
+                                    authErrorMessage = error.message ?: "Backend Google login failed."
+                                }
+                            }
+                            GoogleSignInResult.Cancelled -> Unit
+                            is GoogleSignInResult.Failure -> {
+                                authErrorMessage = result.message
+                            }
+                        }
+                    }
+                },
                 onAppleLogin = { isAuthenticated = true },
                 onPrivacyTermsClick = { showLegalScreen = true },
+            )
+        }
+        authErrorMessage?.let { message ->
+            AlertDialog(
+                onDismissRequest = { authErrorMessage = null },
+                title = { Text("Google sign-in") },
+                text = { Text(message) },
+                confirmButton = {
+                    TextButton(onClick = { authErrorMessage = null }) {
+                        Text("OK")
+                    }
+                },
             )
         }
         return
