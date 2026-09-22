@@ -13,9 +13,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -23,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirstOrNull
+import dev.orestegabo.sequohub.core.network.ApiHealthClient
+import dev.orestegabo.sequohub.core.network.ApiHealthUiState
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.stringsFor
@@ -38,6 +42,7 @@ import dev.orestegabo.sequohub.feature.settings.ThemeMode
 import dev.orestegabo.sequohub.feature.splash.SplashScreen
 import dev.orestegabo.sequohub.navigation.MainTab
 import dev.orestegabo.sequohub.navigation.SequoBottomNavigation
+import kotlinx.coroutines.launch
 
 @Composable
 @Preview
@@ -70,10 +75,17 @@ private fun SequoHubApp(
     var showLegalScreen by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
+    var apiHealthState by remember { mutableStateOf<ApiHealthUiState>(ApiHealthUiState.Idle) }
+    val apiHealthClient = remember { ApiHealthClient() }
+    val scope = rememberCoroutineScope()
     val strings = LocalSequoStrings.current
     val lockers = sampleLockers(strings)
     val hubBlockedBySequo = false
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
+
+    DisposableEffect(apiHealthClient) {
+        onDispose { apiHealthClient.close() }
+    }
 
     if (showSplash) {
         SplashScreen(onTimeout = { showSplash = false })
@@ -129,6 +141,18 @@ private fun SequoHubApp(
                 onRevokeNotifications = {},
                 onOpenNotificationPreferences = {},
                 onMarkLockerUnavailable = { _, _, _ -> },
+                apiHealthState = apiHealthState,
+                onCheckApiHealth = {
+                    apiHealthState = ApiHealthUiState.Checking
+                    scope.launch {
+                        val result = apiHealthClient.checkReachability()
+                        apiHealthState = if (result.requestReachedBackend) {
+                            ApiHealthUiState.Online(result)
+                        } else {
+                            ApiHealthUiState.Offline(result)
+                        }
+                    }
+                },
                 onLogout = {
                     selectedTab = MainTab.Hub
                     selectedLockerId = null
