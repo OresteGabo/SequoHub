@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
@@ -59,6 +60,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.SequoStrings
+import dev.orestegabo.sequohub.core.network.ApiHealthUiState
 import dev.orestegabo.sequohub.feature.hub.LockerUi
 
 @Composable
@@ -78,6 +80,8 @@ fun SettingsScreen(
     onRevokeNotifications: () -> Unit,
     onOpenNotificationPreferences: () -> Unit,
     onMarkLockerUnavailable: (LockerUi, String, String) -> Unit,
+    apiHealthState: ApiHealthUiState,
+    onCheckApiHealth: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
 ) {
@@ -101,6 +105,8 @@ fun SettingsScreen(
             onOpenOpeningHours = { page = SettingsPage.OpeningHours },
             onLogoutClick = { showLogoutDialog = true },
             onDeleteAccountClick = { showDeleteDialog = true },
+            apiHealthState = apiHealthState,
+            onCheckApiHealth = onCheckApiHealth,
         )
         SettingsPage.LockerClosure -> LockerClosurePage(
             lockers = lockers,
@@ -179,6 +185,8 @@ private fun SettingsMainPage(
     onOpenOpeningHours: () -> Unit,
     onLogoutClick: () -> Unit,
     onDeleteAccountClick: () -> Unit,
+    apiHealthState: ApiHealthUiState,
+    onCheckApiHealth: () -> Unit,
 ) {
     val strings = LocalSequoStrings.current
     AppScroll {
@@ -190,6 +198,17 @@ private fun SettingsMainPage(
         )
 
         OperatorCard(state = state)
+
+        SettingsSection(title = "Backend") {
+            SettingsRow(
+                icon = Icons.Filled.CloudDone,
+                title = "API request probe",
+                subtitle = apiHealthState.subtitle(),
+                trailingText = apiHealthState.actionLabel(),
+                tone = apiHealthState.rowTone(),
+                onClick = onCheckApiHealth,
+            )
+        }
 
         SettingsSection(title = strings.appearance) {
             Text(
@@ -768,6 +787,29 @@ private enum class SettingsPage {
     LockerClosure,
     OpeningHours,
 }
+
+private fun ApiHealthUiState.subtitle(): String =
+    when (this) {
+        ApiHealthUiState.Idle -> "Tap to send a traced request."
+        ApiHealthUiState.Checking -> "Sending request to production backend..."
+        is ApiHealthUiState.Online -> {
+            "Reached: HTTP ${result.statusCode ?: "-"} trace ${result.traceId}"
+        }
+        is ApiHealthUiState.Offline -> "Not reached: ${result.message}"
+    }
+
+private fun ApiHealthUiState.actionLabel(): String =
+    when (this) {
+        ApiHealthUiState.Checking -> "..."
+        else -> "Check"
+    }
+
+private fun ApiHealthUiState.rowTone(): SettingsRowTone =
+    when (this) {
+        is ApiHealthUiState.Offline -> SettingsRowTone.Danger
+        is ApiHealthUiState.Online -> SettingsRowTone.Primary
+        else -> SettingsRowTone.Neutral
+    }
 
 private fun openingHoursSummary(state: SettingsUiState, strings: SequoStrings): String {
     if (state.closeToday) return strings.closedToday
