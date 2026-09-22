@@ -11,6 +11,12 @@
         android:usesCleartextTraffic="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.SequoHub.Starting">
+
+        <!-- Optional: Meta-data if your specific auth library requires the Client ID in the manifest -->
+        <meta-data
+            android:name="com.google.android.gms.auth.api.signin.google_client_id"
+            android:value="@string/google_client_id" />
+
         <activity
             android:exported="true"
             android:name=".MainActivity">
