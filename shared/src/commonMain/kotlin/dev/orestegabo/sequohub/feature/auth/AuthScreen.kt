@@ -28,10 +28,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -59,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -279,12 +283,30 @@ private fun EmailFallbackPage(
     onPrivacyTermsClick: () -> Unit,
 ) {
     var authMode by rememberSaveable { mutableStateOf(AuthMode.SignIn) }
+    var authStep by rememberSaveable { mutableStateOf(AuthStep.Email) }
     var email by rememberSaveable { mutableStateOf("") }
+    var birthDate by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
+    var biometricConsent by rememberSaveable { mutableStateOf(true) }
     val colorScheme = MaterialTheme.colorScheme
     val isSignUp = authMode == AuthMode.SignUp
     val emailError = emailValidationError(email)
     val provider = authProviderForEmail(email)
     val canContinue = email.isNotBlank() && emailError == null
+    val birthDateError = birthDateValidationError(birthDate)
+    val passwordError = signUpPasswordValidationError(password)
+    val confirmPasswordError = confirmPasswordValidationError(password, confirmPassword)
+    val canSubmitCredentials = if (isSignUp) {
+        birthDate.isNotBlank() &&
+            birthDateError == null &&
+            password.isNotBlank() &&
+            passwordError == null &&
+            confirmPassword.isNotBlank() &&
+            confirmPasswordError == null
+    } else {
+        password.isNotBlank()
+    }
     val providerHint = when (provider) {
         AuthProvider.Google -> "Gmail accounts continue securely with Google."
         AuthProvider.Apple -> "iCloud, Me, and Mac accounts continue securely with Apple."
@@ -325,23 +347,44 @@ private fun EmailFallbackPage(
 
             AuthModeTabs(
                 selectedMode = authMode,
-                onModeSelected = { authMode = it },
+                onModeSelected = {
+                    authMode = it
+                    authStep = AuthStep.Email
+                    password = ""
+                    confirmPassword = ""
+                    birthDate = ""
+                    biometricConsent = true
+                },
             )
 
             Spacer(modifier = Modifier.size(18.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = if (isSignUp) "Create your account" else "Find your account",
+                    text = when {
+                        authStep == AuthStep.Credentials && isSignUp -> "Secure your account"
+                        authStep == AuthStep.Credentials -> "Welcome back"
+                        isSignUp -> "Create your account"
+                        else -> "Find your account"
+                    },
                     color = colorScheme.onBackground,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = if (isSignUp) {
-                        "Enter your email and we will route you to the safest sign-up method."
-                    } else {
-                        "Enter your email and we will route you to the right sign-in method."
+                    text = when {
+                        authStep == AuthStep.Credentials && isSignUp -> {
+                            "Add your birth date and choose a strong password to finish setup."
+                        }
+                        authStep == AuthStep.Credentials -> {
+                            "Enter your password to continue."
+                        }
+                        isSignUp -> {
+                            "Enter your email and we will route you to the safest sign-up method."
+                        }
+                        else -> {
+                            "Enter your email and we will route you to the right sign-in method."
+                        }
                     },
                     color = colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
@@ -351,57 +394,280 @@ private fun EmailFallbackPage(
             Spacer(modifier = Modifier.size(20.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = email,
-                    onValueChange = { email = it.trim() },
-                    singleLine = true,
-                    label = { Text("Email address") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.AlternateEmail,
-                            contentDescription = null,
-                            tint = colorScheme.primary,
+                if (authStep == AuthStep.Email) {
+                    OutlinedTextField(
+                        modifier = Modifier.fillMaxWidth(),
+                        value = email,
+                        onValueChange = {
+                            email = it.trim()
+                            authStep = AuthStep.Email
+                        },
+                        singleLine = true,
+                        label = { Text("Email address") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.AlternateEmail,
+                                contentDescription = null,
+                                tint = colorScheme.primary,
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.None,
+                            keyboardType = KeyboardType.Email,
+                        ),
+                        isError = emailError != null,
+                        supportingText = {
+                            Text(emailError ?: providerHint)
+                        },
+                        shape = SequoHubShapes.Small,
+                        colors = emailFieldColors(),
+                    )
+
+                    Spacer(modifier = Modifier.size(2.dp))
+
+                    AuthProviderActionButton(
+                        provider = provider,
+                        mode = authMode,
+                        enabled = canContinue,
+                        onEmail = { authStep = AuthStep.Credentials },
+                        onGoogle = onGoogleLogin,
+                        onApple = onAppleLogin,
+                    )
+                } else {
+                    EmailCredentialsForm(
+                        mode = authMode,
+                        email = email,
+                        birthDate = birthDate,
+                        onBirthDateChange = { birthDate = cleanBirthDateInput(it) },
+                        birthDateError = birthDateError,
+                        password = password,
+                        onPasswordChange = { password = it },
+                        passwordError = passwordError,
+                        confirmPassword = confirmPassword,
+                        onConfirmPasswordChange = { confirmPassword = it },
+                        confirmPasswordError = confirmPasswordError,
+                        biometricConsent = biometricConsent,
+                        onBiometricConsentChange = { biometricConsent = it },
+                    )
+
+                    Button(
+                        onClick = onLogin,
+                        enabled = canSubmitCredentials,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = SequoHubShapes.Small,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary,
+                        ),
+                    ) {
+                        Text(
+                            text = if (isSignUp) "Create account" else "Sign in",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.None,
-                        keyboardType = KeyboardType.Email,
-                    ),
-                    isError = emailError != null,
-                    supportingText = {
-                        Text(emailError ?: providerHint)
-                    },
-                    shape = SequoHubShapes.Small,
-                    colors = emailFieldColors(),
-                )
-
-                Spacer(modifier = Modifier.size(2.dp))
-
-                AuthProviderActionButton(
-                    provider = provider,
-                    mode = authMode,
-                    enabled = canContinue,
-                    onEmail = onLogin,
-                    onGoogle = onGoogleLogin,
-                    onApple = onAppleLogin,
-                )
+                    }
+                }
 
                 Text(
-                    text = "Back to Apple or Google",
+                    text = if (authStep == AuthStep.Credentials) "Change email" else "Back to Apple or Google",
                     color = colorScheme.primary,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = onBack)
+                        .clickable(
+                            onClick = {
+                                if (authStep == AuthStep.Credentials) {
+                                    authStep = AuthStep.Email
+                                    password = ""
+                                    confirmPassword = ""
+                                    birthDate = ""
+                                    biometricConsent = true
+                                } else {
+                                    onBack()
+                                }
+                            },
+                        )
                         .padding(vertical = 4.dp),
                 )
 
                 TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
             }
         }
+    }
+}
+
+@Composable
+private fun EmailCredentialsForm(
+    mode: AuthMode,
+    email: String,
+    birthDate: String,
+    onBirthDateChange: (String) -> Unit,
+    birthDateError: String?,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    passwordError: String?,
+    confirmPassword: String,
+    onConfirmPasswordChange: (String) -> Unit,
+    confirmPasswordError: String?,
+    biometricConsent: Boolean,
+    onBiometricConsentChange: (Boolean) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val isSignUp = mode == AuthMode.SignUp
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SequoHubShapes.Small,
+        color = colorScheme.surface.copy(alpha = 0.6f),
+        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.42f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = email,
+                color = colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = if (isSignUp) "Email sign-up" else "Email sign-in",
+                color = colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
+
+    if (isSignUp) {
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = birthDate,
+            onValueChange = onBirthDateChange,
+            singleLine = true,
+            label = { Text("Birth date") },
+            placeholder = { Text("YYYY-MM-DD") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.CalendarMonth,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                )
+            },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                keyboardType = KeyboardType.Number,
+            ),
+            isError = birthDateError != null,
+            supportingText = {
+                Text(birthDateError ?: "Use your legal birth date.")
+            },
+            shape = SequoHubShapes.Small,
+            colors = emailFieldColors(),
+        )
+    }
+
+    OutlinedTextField(
+        modifier = Modifier.fillMaxWidth(),
+        value = password,
+        onValueChange = onPasswordChange,
+        singleLine = true,
+        label = { Text("Password") },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Filled.Lock,
+                contentDescription = null,
+                tint = colorScheme.primary,
+            )
+        },
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.None,
+            keyboardType = KeyboardType.Password,
+        ),
+        isError = isSignUp && passwordError != null,
+        supportingText = if (isSignUp) {
+            { Text(passwordError ?: "At least 10 characters with upper, lower, number, and symbol.") }
+        } else {
+            null
+        },
+        shape = SequoHubShapes.Small,
+        colors = emailFieldColors(),
+    )
+
+    if (isSignUp) {
+        OutlinedTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = confirmPassword,
+            onValueChange = onConfirmPasswordChange,
+            singleLine = true,
+            label = { Text("Confirm password") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                )
+            },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.None,
+                keyboardType = KeyboardType.Password,
+            ),
+            isError = confirmPasswordError != null,
+            supportingText = {
+                Text(confirmPasswordError ?: "Repeat the same password.")
+            },
+            shape = SequoHubShapes.Small,
+            colors = emailFieldColors(),
+        )
+    } else {
+        BiometricConsentRow(
+            checked = biometricConsent,
+            onCheckedChange = onBiometricConsentChange,
+        )
+    }
+}
+
+@Composable
+private fun BiometricConsentRow(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 2.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
+        Icon(
+            imageVector = Icons.Filled.Fingerprint,
+            contentDescription = null,
+            tint = colorScheme.primary,
+            modifier = Modifier.size(22.dp),
+        )
+        Text(
+            text = "Use biometric unlock on this device",
+            color = colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -574,6 +840,11 @@ private fun emailFieldColors() = OutlinedTextFieldDefaults.colors(
     cursorColor = MaterialTheme.colorScheme.primary,
 )
 
+private enum class AuthStep {
+    Email,
+    Credentials,
+}
+
 private enum class AuthMode(val label: String) {
     SignIn("Sign in"),
     SignUp("Sign up"),
@@ -596,6 +867,51 @@ private fun emailValidationError(email: String): String? {
         !trimmed.contains(' ') &&
         domain.substringAfterLast('.').length >= 2
     return if (isValid) null else "Enter a valid email address."
+}
+
+private fun cleanBirthDateInput(value: String): String =
+    value.filter { it.isDigit() || it == '-' }.take(10)
+
+private fun birthDateValidationError(value: String): String? {
+    if (value.isBlank()) return null
+    val parts = value.split("-")
+    if (parts.size != 3 || parts[0].length != 4 || parts[1].length != 2 || parts[2].length != 2) {
+        return "Use the format YYYY-MM-DD."
+    }
+    val year = parts[0].toIntOrNull() ?: return "Use a valid year."
+    val month = parts[1].toIntOrNull() ?: return "Use a valid month."
+    val day = parts[2].toIntOrNull() ?: return "Use a valid day."
+    if (year !in 1900..2026) return "Use a valid year."
+    if (month !in 1..12) return "Use a valid month."
+    val maxDay = when (month) {
+        2 -> if (isLeapYear(year)) 29 else 28
+        4, 6, 9, 11 -> 30
+        else -> 31
+    }
+    return if (day in 1..maxDay) null else "Use a valid day."
+}
+
+private fun isLeapYear(year: Int): Boolean =
+    year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
+
+private fun signUpPasswordValidationError(password: String): String? {
+    if (password.isBlank()) return null
+    val missing = buildList {
+        if (password.length < 10) add("10 characters")
+        if (password.none { it.isUpperCase() }) add("uppercase letter")
+        if (password.none { it.isLowerCase() }) add("lowercase letter")
+        if (password.none { it.isDigit() }) add("number")
+        if (password.none { !it.isLetterOrDigit() }) add("symbol")
+    }
+    return if (missing.isEmpty()) null else "Missing: ${missing.joinToString()}."
+}
+
+private fun confirmPasswordValidationError(
+    password: String,
+    confirmPassword: String,
+): String? {
+    if (confirmPassword.isBlank()) return null
+    return if (password == confirmPassword) null else "Passwords do not match."
 }
 
 private fun authProviderForEmail(email: String): AuthProvider {
