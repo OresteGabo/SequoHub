@@ -17,5 +17,22 @@
 			</dict>
 		</dict>
 	</dict>
+	<key>CLIENT_ID</key>
+	<string>543119759762-ehcnb5lpi883c94457ogrgqsd0nshde2.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.543119759762-ehcnb5lpi883c94457ogrgqsd0nshde2</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>dev.orestegabo.sequohub.SequoHub</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.543119759762-ehcnb5lpi883c94457ogrgqsd0nshde2</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
