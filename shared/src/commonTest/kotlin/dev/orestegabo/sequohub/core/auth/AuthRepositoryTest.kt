@@ -91,6 +91,26 @@ class AuthRepositoryTest {
         assertEquals(401, error.statusCode)
     }
 
+    @Test
+    fun backendGoogleTokenReasonIsMappedToHelpfulMessage() = kotlinx.coroutines.test.runTest {
+        val apiClient = AuthApiClient(
+            httpClient = testHttpClient {
+                respond(
+                    content = """{"error":"invalid_google_token","reason":"invalid_audience"}""",
+                    status = HttpStatusCode.Unauthorized,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            },
+        )
+
+        val error = assertFailsWith<AuthApiException> {
+            apiClient.loginWithGoogle("google-id-token")
+        }
+
+        assertEquals(401, error.statusCode)
+        assertTrue(error.message.orEmpty().contains("Google client ID"))
+    }
+
     private fun testHttpClient(
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ): HttpClient =
