@@ -52,6 +52,9 @@ class MainActivity : ComponentActivity() {
                 credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
             ) {
                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                if (googleCredential.idToken.isBlank()) {
+                    return GoogleSignInResult.Failure("Google ID token missing. Check OAuth client configuration.")
+                }
                 GoogleSignInResult.Success(
                     idToken = googleCredential.idToken,
                     displayName = googleCredential.displayName,
