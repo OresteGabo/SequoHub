@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -84,6 +85,7 @@ fun AuthScreen(
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     onLogin: () -> Unit,
+    googleSignInInProgress: Boolean = false,
     onGoogleLogin: () -> Unit,
     onAppleLogin: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
@@ -113,6 +115,7 @@ fun AuthScreen(
                 onLanguageChange = onLanguageChange,
                 onBack = { showEmailFallback = false },
                 onLogin = onLogin,
+                googleSignInInProgress = googleSignInInProgress,
                 onGoogleLogin = onGoogleLogin,
                 onAppleLogin = onAppleLogin,
                 onPrivacyTermsClick = onPrivacyTermsClick,
@@ -122,6 +125,7 @@ fun AuthScreen(
                 language = language,
                 onLanguageChange = onLanguageChange,
                 onAppleLogin = onAppleLogin,
+                googleSignInInProgress = googleSignInInProgress,
                 onGoogleLogin = onGoogleLogin,
                 onEmailFallback = { showEmailFallback = true },
                 onPrivacyTermsClick = onPrivacyTermsClick,
@@ -135,6 +139,7 @@ private fun SocialAuthPage(
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     onAppleLogin: () -> Unit,
+    googleSignInInProgress: Boolean,
     onGoogleLogin: () -> Unit,
     onEmailFallback: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
@@ -159,7 +164,10 @@ private fun SocialAuthPage(
             Spacer(modifier = Modifier.size(24.dp))
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 AppleButton(onClick = onAppleLogin)
-                GoogleButton(onClick = onGoogleLogin)
+                GoogleButton(
+                    loading = googleSignInInProgress,
+                    onClick = onGoogleLogin,
+                )
 
                 Text(
                     text = "Use email instead",
@@ -278,6 +286,7 @@ private fun EmailFallbackPage(
     onLanguageChange: (AppLanguage) -> Unit,
     onBack: () -> Unit,
     onLogin: () -> Unit,
+    googleSignInInProgress: Boolean,
     onGoogleLogin: () -> Unit,
     onAppleLogin: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
@@ -428,7 +437,8 @@ private fun EmailFallbackPage(
                     AuthProviderActionButton(
                         provider = provider,
                         mode = authMode,
-                        enabled = canContinue,
+                        enabled = canContinue && !googleSignInInProgress,
+                        googleSignInInProgress = googleSignInInProgress,
                         onEmail = { authStep = AuthStep.Credentials },
                         onGoogle = onGoogleLogin,
                         onApple = onAppleLogin,
@@ -720,13 +730,14 @@ private fun AuthProviderActionButton(
     provider: AuthProvider,
     mode: AuthMode,
     enabled: Boolean,
+    googleSignInInProgress: Boolean,
     onEmail: () -> Unit,
     onGoogle: () -> Unit,
     onApple: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val label = when (provider) {
-        AuthProvider.Google -> "Continue with Google"
+        AuthProvider.Google -> if (googleSignInInProgress) "Signing in..." else "Continue with Google"
         AuthProvider.Apple -> "Continue with Apple"
         AuthProvider.Email -> if (mode == AuthMode.SignUp) "Continue with email" else "Continue"
     }
@@ -761,12 +772,20 @@ private fun AuthProviderActionButton(
             contentColor = contentColor,
         ),
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (provider == AuthProvider.Google) Color.Unspecified else contentColor,
-            modifier = Modifier.size(22.dp),
-        )
+        if (provider == AuthProvider.Google && googleSignInInProgress) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = contentColor,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (provider == AuthProvider.Google) Color.Unspecified else contentColor,
+                modifier = Modifier.size(22.dp),
+            )
+        }
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = label,
@@ -1163,10 +1182,14 @@ private fun AppleButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun GoogleButton(onClick: () -> Unit) {
+private fun GoogleButton(
+    loading: Boolean,
+    onClick: () -> Unit,
+) {
     val colorScheme = MaterialTheme.colorScheme
     OutlinedButton(
         onClick = onClick,
+        enabled = !loading,
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp),
@@ -1177,15 +1200,23 @@ private fun GoogleButton(onClick: () -> Unit) {
             contentColor = colorScheme.onSurface,
         ),
     ) {
-        Icon(
-            imageVector = GoogleIcon,
-            contentDescription = null,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(22.dp),
-        )
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = colorScheme.primary,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Icon(
+                imageVector = GoogleIcon,
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(22.dp),
+            )
+        }
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = "Continue with Google",
+            text = if (loading) "Signing in..." else "Continue with Google",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
