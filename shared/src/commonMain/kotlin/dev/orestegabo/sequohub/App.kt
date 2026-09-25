@@ -17,6 +17,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +30,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirstOrNull
 import dev.orestegabo.sequohub.core.auth.AuthApiClient
+import dev.orestegabo.sequohub.core.auth.AuthRepository
 import dev.orestegabo.sequohub.core.auth.GoogleSignInResult
+import dev.orestegabo.sequohub.core.auth.rememberAuthSessionStore
 import dev.orestegabo.sequohub.core.network.ApiHealthClient
 import dev.orestegabo.sequohub.core.network.ApiHealthUiState
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
@@ -88,7 +91,13 @@ private fun SequoHubApp(
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
     var authErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var apiHealthState by remember { mutableStateOf<ApiHealthUiState>(ApiHealthUiState.Idle) }
-    val authApiClient = remember { AuthApiClient() }
+    val authSessionStore = rememberAuthSessionStore()
+    val authRepository = remember(authSessionStore) {
+        AuthRepository(
+            authApiClient = AuthApiClient(),
+            sessionStore = authSessionStore,
+        )
+    }
     val apiHealthClient = remember { ApiHealthClient() }
     val scope = rememberCoroutineScope()
     val strings = LocalSequoStrings.current
@@ -96,11 +105,15 @@ private fun SequoHubApp(
     val hubBlockedBySequo = false
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
 
-    DisposableEffect(apiHealthClient) {
+    DisposableEffect(authRepository, apiHealthClient) {
         onDispose {
-            authApiClient.close()
+            authRepository.close()
             apiHealthClient.close()
         }
+    }
+
+    LaunchedEffect(authRepository) {
+        isAuthenticated = authRepository.getSavedSession() != null
     }
 
     if (showSplash) {
@@ -121,7 +134,7 @@ private fun SequoHubApp(
                         when (val result = onGoogleSignIn()) {
                             is GoogleSignInResult.Success -> {
                                 runCatching {
-                                    authApiClient.loginWithGoogle(result.idToken)
+                                    authRepository.loginWithGoogle(result.idToken)
                                 }.onSuccess {
                                     authErrorMessage = null
                                     isAuthenticated = true
@@ -201,9 +214,12 @@ private fun SequoHubApp(
                     }
                 },
                 onLogout = {
-                    selectedTab = MainTab.Hub
-                    selectedLockerId = null
-                    isAuthenticated = false
+                    scope.launch {
+                        authRepository.logout()
+                        selectedTab = MainTab.Hub
+                        selectedLockerId = null
+                        isAuthenticated = false
+                    }
                 },
                 onDeleteAccount = {},
             )
