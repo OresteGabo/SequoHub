@@ -50,6 +50,7 @@ import dev.orestegabo.sequohub.feature.settings.ThemeMode
 import dev.orestegabo.sequohub.feature.splash.SplashScreen
 import dev.orestegabo.sequohub.navigation.MainTab
 import dev.orestegabo.sequohub.navigation.SequoBottomNavigation
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
@@ -90,6 +91,7 @@ private fun SequoHubApp(
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
     var authErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var googleSignInInProgress by rememberSaveable { mutableStateOf(false) }
     var apiHealthState by remember { mutableStateOf<ApiHealthUiState>(ApiHealthUiState.Idle) }
     val authSessionStore = rememberAuthSessionStore()
     val authRepository = remember(authSessionStore) {
@@ -129,23 +131,45 @@ private fun SequoHubApp(
                 language = settings.language,
                 onLanguageChange = { onSettingsChange(settings.copy(language = it)) },
                 onLogin = { isAuthenticated = true },
+                googleSignInInProgress = googleSignInInProgress,
                 onGoogleLogin = {
+                    if (googleSignInInProgress) return@AuthScreen
                     scope.launch {
-                        when (val result = onGoogleSignIn()) {
-                            is GoogleSignInResult.Success -> {
-                                runCatching {
-                                    authRepository.loginWithGoogle(result.idToken)
-                                }.onSuccess {
-                                    authErrorMessage = null
-                                    isAuthenticated = true
-                                }.onFailure { error ->
-                                    authErrorMessage = error.message ?: "Backend Google login failed."
+                        googleSignInInProgress = true
+                        authErrorMessage = null
+                        try {
+                            val result = runCatching {
+                                onGoogleSignIn()
+                            }.getOrElse { error ->
+                                if (error is CancellationException) throw error
+                                println("Google sign-in failed before backend login: ${error.message}")
+                                GoogleSignInResult.Failure(error.message ?: "Google sign-in failed.")
+                            }
+
+                            when (result) {
+                                is GoogleSignInResult.Success -> {
+                                    println("Google sign-in succeeded locally; sending token to backend.")
+                                    runCatching {
+                                        authRepository.loginWithGoogle(result.idToken)
+                                    }.onSuccess {
+                                        authErrorMessage = null
+                                        isAuthenticated = true
+                                    }.onFailure { error ->
+                                        if (error is CancellationException) throw error
+                                        println("Google backend login failed: ${error.message}")
+                                        authErrorMessage = error.message ?: "Backend Google login failed."
+                                    }
+                                }
+                                GoogleSignInResult.Cancelled -> {
+                                    println("Google sign-in cancelled by the user or provider.")
+                                }
+                                is GoogleSignInResult.Failure -> {
+                                    println("Google sign-in failed: ${result.message}")
+                                    authErrorMessage = result.message
                                 }
                             }
-                            GoogleSignInResult.Cancelled -> Unit
-                            is GoogleSignInResult.Failure -> {
-                                authErrorMessage = result.message
-                            }
+                        } finally {
+                            googleSignInInProgress = false
                         }
                     }
                 },
