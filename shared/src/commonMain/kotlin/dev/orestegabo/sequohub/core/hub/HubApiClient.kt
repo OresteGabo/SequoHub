@@ -81,6 +81,21 @@ class HubApiClient(
         }.body()
     }
 
+    suspend fun recordReturnDropoff(
+        returnId: String,
+        relayPointId: String,
+        rawReturnPin: String,
+    ): ReturnDropoffResponse = safeCall {
+        httpClient.post("${baseUrl.trimEnd('/')}/api/returns/$returnId/relay-dropoff") {
+            setBody(
+                ReturnDropoffRequest(
+                    relayPointId = relayPointId,
+                    rawReturnPin = rawReturnPin,
+                )
+            )
+        }.body()
+    }
+
     fun close() {
         httpClient.close()
     }
@@ -261,6 +276,20 @@ data class OpeningHourExceptionResponse(
     val closesAt: String? = null,
     val reason: String? = null,
     val effectiveUntil: String? = null,
+)
+
+@Serializable
+data class ReturnDropoffRequest(
+    val relayPointId: String,
+    val rawReturnPin: String,
+)
+
+@Serializable
+data class ReturnDropoffResponse(
+    val id: String? = null,
+    val returnId: String? = null,
+    val status: String? = null,
+    val relayPointId: String? = null,
 )
 
 @Serializable

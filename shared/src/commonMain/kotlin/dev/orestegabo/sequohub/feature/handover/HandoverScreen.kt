@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -46,11 +47,12 @@ fun HandoverScreen(
     onValidatePickup: (String) -> Unit,
     onCollectFeeAndOpen: () -> Unit,
     onValidateReturn: (String) -> Unit,
-    onReceiveReturn: () -> Unit,
+    onReceiveReturn: (String) -> Unit,
 ) {
     var mode by rememberSaveable { mutableStateOf(HandoverMode.Pickup) }
     var code by rememberSaveable { mutableStateOf("") }
     var idVerified by rememberSaveable { mutableStateOf(false) }
+    var returnConditionNote by rememberSaveable { mutableStateOf("") }
     var confirmInProgress by rememberSaveable { mutableStateOf(false) }
     val strings = LocalSequoStrings.current
 
@@ -74,6 +76,7 @@ fun HandoverScreen(
                         mode = item
                         code = ""
                         idVerified = false
+                        returnConditionNote = ""
                     },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = index,
@@ -99,6 +102,7 @@ fun HandoverScreen(
                     val submittedCode = code
                     code = ""
                     idVerified = false
+                    returnConditionNote = ""
                     if (mode == HandoverMode.Pickup) {
                         onValidatePickup(submittedCode)
                     } else {
@@ -111,7 +115,14 @@ fun HandoverScreen(
         if (mode == HandoverMode.Pickup) {
             PickupFeeModal(resolution = pickupResolution, connectionState = connectionState, idVerified = idVerified, confirmInProgress = confirmInProgress, onIdVerifiedChange = { idVerified = it }, onCollectFeeAndOpen = { confirmInProgress = true; onCollectFeeAndOpen(); confirmInProgress = false })
         } else {
-            ReturnValidationCard(resolution = returnResolution, idVerified = idVerified, onIdVerifiedChange = { idVerified = it }, onReceiveReturn = onReceiveReturn)
+            ReturnValidationCard(
+                resolution = returnResolution,
+                idVerified = idVerified,
+                conditionNote = returnConditionNote,
+                onIdVerifiedChange = { idVerified = it },
+                onConditionNoteChange = { returnConditionNote = sanitizeConditionNote(it) },
+                onReceiveReturn = { onReceiveReturn(returnConditionNote) },
+            )
         }
     }
 }
@@ -227,7 +238,9 @@ private fun PickupFeeModal(
 private fun ReturnValidationCard(
     resolution: HubScanUiResult?,
     idVerified: Boolean,
+    conditionNote: String,
     onIdVerifiedChange: (Boolean) -> Unit,
+    onConditionNoteChange: (String) -> Unit,
     onReceiveReturn: () -> Unit,
 ) {
     MinimalCard {
@@ -254,6 +267,16 @@ private fun ReturnValidationCard(
 
         DetailRow(label = strings.idCheck, value = if (resolution?.identityVerificationRequired != false) strings.requiredBeforeIntake else strings.clear)
         DetailRow(label = strings.refundDecision, value = strings.sequoFinalValidationOnly)
+        DetailRow(label = strings.lockerAssigned, value = resolution?.lockerId ?: "C05")
+        OutlinedTextField(
+            value = conditionNote,
+            onValueChange = onConditionNoteChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(strings.visibleConditionNote) },
+            placeholder = { Text(strings.conditionNotePlaceholder) },
+            minLines = 2,
+            maxLines = 3,
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -262,9 +285,23 @@ private fun ReturnValidationCard(
             Checkbox(checked = idVerified, onCheckedChange = onIdVerifiedChange)
             Text(strings.verifyCustomerId, style = MaterialTheme.typography.bodyMedium)
         }
-        PrimaryActionButton(label = strings.receiveReturn, enabled = idVerified, onClick = onReceiveReturn)
+        Text(
+            text = strings.returnStoredForCollection,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        PrimaryActionButton(
+            label = strings.receiveReturn,
+            enabled = idVerified && conditionNote.isNotBlank() && resolution != null,
+            onClick = onReceiveReturn,
+        )
     }
 }
+
+private fun sanitizeConditionNote(input: String): String =
+    input
+        .filter { it.isLetterOrDigit() || it.isWhitespace() || it in ".,'/-()" }
+        .take(160)
 
 @Composable
 private fun handoverBlockingMessage(reason: String): String {

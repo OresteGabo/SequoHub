@@ -10,6 +10,7 @@ interface HubRepository {
     suspend fun loadHubState(hubId: String, strings: SequoStrings): HubOperationalState
     suspend fun resolveManualCode(hubId: String, code: String): HubScanUiResult
     suspend fun setLockerMaintenance(hubId: String, lockerId: String, unavailable: Boolean): HubOperationResult
+    suspend fun recordReturnDropoff(hubId: String, returnId: String, rawReturnPin: String, conditionNote: String): HubOperationResult
     fun close()
 }
 
@@ -52,6 +53,11 @@ class ApiHubRepository(
             reason = if (unavailable) HubLockerAvailabilityReason.OTHER else HubLockerAvailabilityReason.OPERATOR_CONFIRMED_AVAILABLE,
         )
         return HubOperationResult(success = true, safeMessage = "Locker status synced.")
+    }
+
+    override suspend fun recordReturnDropoff(hubId: String, returnId: String, rawReturnPin: String, conditionNote: String): HubOperationResult {
+        apiClient.recordReturnDropoff(returnId = returnId, relayPointId = hubId, rawReturnPin = rawReturnPin)
+        return HubOperationResult(success = true, safeMessage = "Return drop-off synced.")
     }
 
     override fun close() {
@@ -109,6 +115,9 @@ class FakeHubRepository : HubRepository {
 
     override suspend fun setLockerMaintenance(hubId: String, lockerId: String, unavailable: Boolean): HubOperationResult =
         HubOperationResult(success = true, safeMessage = "Saved locally until hub sync is available.")
+
+    override suspend fun recordReturnDropoff(hubId: String, returnId: String, rawReturnPin: String, conditionNote: String): HubOperationResult =
+        HubOperationResult(success = true, safeMessage = "Return stored locally until hub sync is available.")
 
     override fun close() = Unit
 }

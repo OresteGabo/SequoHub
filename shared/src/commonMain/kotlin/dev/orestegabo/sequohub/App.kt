@@ -111,6 +111,7 @@ private fun SequoHubApp(
     var scanResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
     var pickupResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
     var returnResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
+    var lastReturnCredential by remember { mutableStateOf<String?>(null) }
     val authSessionStore = rememberAuthSessionStore()
     val authRepository = remember(authSessionStore) {
         AuthRepository(
@@ -252,12 +253,21 @@ private fun SequoHubApp(
                     activeWorkflow = null
                 },
                 onValidateReturn = { code ->
+                    lastReturnCredential = code
                     scope.launch {
                         returnResolution = runCatching { hubRepository.resolveManualCode(DemoHubId, code) }.getOrNull()
                     }
                 },
-                onReceiveReturn = {
-                    scope.launch { hubState = hubRepository.loadHubState(DemoHubId, strings) }
+                onReceiveReturn = { conditionNote ->
+                    val returnId = returnResolution?.displayReference
+                    val credential = lastReturnCredential
+                    scope.launch {
+                        if (!returnId.isNullOrBlank() && !credential.isNullOrBlank()) {
+                            runCatching { hubRepository.recordReturnDropoff(DemoHubId, returnId, credential, conditionNote) }
+                        }
+                        hubState = hubRepository.loadHubState(DemoHubId, strings)
+                        lastReturnCredential = null
+                    }
                     activeWorkflow = null
                 },
             )
