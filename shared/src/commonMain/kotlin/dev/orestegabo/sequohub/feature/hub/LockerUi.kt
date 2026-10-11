@@ -27,6 +27,9 @@ data class LockerUi(
     val ageLabel: String,
     val nextAction: String,
     val feeDueCfa: Int,
+    val storedSinceLabel: String = "-",
+    val daysStored: Int = 0,
+    val returnToSellerDue: Boolean = false,
     val primaryAction: String,
     val syncState: LockerSyncState,
 )
@@ -68,6 +71,13 @@ fun sampleLockers(strings: SequoStrings): List<LockerUi> {
             val id = "$row${column.toString().padStart(2, '0')}"
             val state = states[rowIndex * 5 + column - 1]
             val hasFeeDue = id in setOf("A04", "D01", "E03")
+            val returnDue = id == "E03"
+            val daysStored = when {
+                returnDue -> 31
+                hasFeeDue -> 16
+                state == LockerState.Occupied -> 6
+                else -> 0
+            }
             val syncState = when (id) {
                 "B03", "D01" -> LockerSyncState.Pending
                 "C04" -> LockerSyncState.Failed
@@ -79,7 +89,11 @@ fun sampleLockers(strings: SequoStrings): List<LockerUi> {
                 packageLabel = if (state == LockerState.Free) strings.clear else strings.packageStored,
                 reference = if (state == LockerState.Free) strings.clear else "SQ-${4400 + rowIndex * 5 + column}",
                 ageLabel = when (state) {
-                    LockerState.Occupied -> if (hasFeeDue) "15 days - ${strings.feeDue}" else strings.pickupReady
+                    LockerState.Occupied -> when {
+                        returnDue -> "31 days - ${strings.returnToSellerDue}"
+                        hasFeeDue -> "16 days - ${strings.feeDue}"
+                        else -> strings.pickupReady
+                    }
                     LockerState.Maintenance -> strings.underMaintenance
                     LockerState.Free -> strings.clear
                 },
@@ -89,6 +103,9 @@ fun sampleLockers(strings: SequoStrings): List<LockerUi> {
                     LockerState.Free -> strings.assign
                 },
                 feeDueCfa = if (hasFeeDue) 1000 else 0,
+                storedSinceLabel = if (state == LockerState.Occupied) "D-$daysStored" else strings.clear,
+                daysStored = daysStored,
+                returnToSellerDue = returnDue,
                 primaryAction = when (state) {
                     LockerState.Free -> strings.assign
                     LockerState.Maintenance -> strings.maintenance

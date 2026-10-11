@@ -85,7 +85,10 @@ class FakeHubRepository : HubRepository {
             summary = HubSummaryUi(
                 freeLockerCount = lockers.count { it.state == LockerState.Free },
                 occupiedLockerCount = occupied,
+                underGracePackageCount = lockers.count { it.state == LockerState.Occupied && it.feeDueCfa == 0 && !it.returnToSellerDue },
                 feeDuePackageCount = feesDue,
+                overduePackageCount = lockers.count { it.daysStored > 14 },
+                returnToSellerDueCount = lockers.count { it.returnToSellerDue },
                 pendingSequoCollectionCount = 2,
                 openIncidentCount = lockers.count { it.state == LockerState.Maintenance },
                 lastSuccessfulSyncLabel = strings.local,
@@ -139,7 +142,10 @@ class FakeHubRepository : HubRepository {
 private fun HubSummaryResponse.toUi(strings: SequoStrings): HubSummaryUi = HubSummaryUi(
     freeLockerCount = freeLockerCount.toInt(),
     occupiedLockerCount = occupiedLockerCount.toInt(),
+    underGracePackageCount = 0,
     feeDuePackageCount = feeDuePackageCount.toInt(),
+    overduePackageCount = feeDuePackageCount.toInt(),
+    returnToSellerDueCount = 0,
     pendingSequoCollectionCount = pendingSequoCollectionCount.toInt(),
     openIncidentCount = openIncidentCount.toInt(),
     lastSuccessfulSyncLabel = lastSuccessfulSyncTimestamp ?: strings.synced,
@@ -171,6 +177,9 @@ private fun List<LockerUi>.withSummary(summary: HubSummaryResponse, strings: Seq
                 ageLabel = strings.pickupReady,
                 nextAction = strings.validate,
                 primaryAction = strings.validate,
+                storedSinceLabel = "D-6",
+                daysStored = 6,
+                returnToSellerDue = false,
                 syncState = LockerSyncState.Synced,
             )
             index >= occupiedTarget && locker.state == LockerState.Occupied -> locker.copy(
@@ -180,6 +189,9 @@ private fun List<LockerUi>.withSummary(summary: HubSummaryResponse, strings: Seq
                 ageLabel = strings.clear,
                 nextAction = strings.assign,
                 feeDueCfa = 0,
+                storedSinceLabel = strings.clear,
+                daysStored = 0,
+                returnToSellerDue = false,
                 primaryAction = strings.assign,
                 syncState = LockerSyncState.Synced,
             )

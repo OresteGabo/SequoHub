@@ -85,30 +85,40 @@ fun HubDashboard(
             },
         )
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = strings.occupied,
-                value = (operationalState?.summary?.occupiedLockerCount ?: effectiveLockers.count { it.state == LockerState.Occupied }).toString(),
-                note = "${effectiveLockers.size} ${strings.locker.lowercase()}s",
-            )
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = strings.feesDue,
-                value = (operationalState?.summary?.feeDuePackageCount ?: effectiveLockers.count { it.feeDueCfa > 0 }).toString(),
-                note = strings.today,
-            )
-            MetricCard(
-                modifier = Modifier.weight(1f),
-                label = strings.sync,
-                value = pendingSyncCount.toString(),
-                note = if (pendingSyncCount == 0) strings.clear else strings.pending,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = strings.underGrace,
+                    value = (operationalState?.summary?.underGracePackageCount ?: effectiveLockers.count { it.state == LockerState.Occupied && it.feeDueCfa == 0 && !it.returnToSellerDue }).toString(),
+                    note = "14 days",
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = strings.feesDue,
+                    value = (operationalState?.summary?.feeDuePackageCount ?: effectiveLockers.count { it.feeDueCfa > 0 }).toString(),
+                    note = strings.today,
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = strings.overdue,
+                    value = (operationalState?.summary?.overduePackageCount ?: effectiveLockers.count { it.daysStored > 14 }).toString(),
+                    note = strings.daysStored,
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    label = strings.returnToSellerDue,
+                    value = (operationalState?.summary?.returnToSellerDueCount ?: effectiveLockers.count { it.returnToSellerDue }).toString(),
+                    note = strings.sequoCollection,
+                )
+            }
         }
 
         LockerGridCard(
@@ -352,6 +362,9 @@ fun LockerDetailOverlay(
                 }
 
                 DetailRow(label = strings.packageAge, value = locker.ageLabel)
+                DetailRow(label = strings.storedSince, value = locker.storedSinceLabel)
+                DetailRow(label = strings.daysStored, value = locker.daysStored.toString())
+                DetailRow(label = strings.storageFee, value = "${locker.feeDueCfa.formatCfa()} CFA")
                 DetailRow(label = strings.reference, value = locker.reference)
                 DetailRow(label = strings.sync, value = locker.syncState.label)
                 DetailRow(label = strings.nextAction, value = locker.nextAction)
@@ -903,3 +916,7 @@ private val LockerSyncState.badgeTone: BadgeTone
         LockerSyncState.Pending -> BadgeTone.Fee
         LockerSyncState.Failed -> BadgeTone.Hold
     }
+
+
+private fun Int.formatCfa(): String =
+    toString().reversed().chunked(3).joinToString(",").reversed()

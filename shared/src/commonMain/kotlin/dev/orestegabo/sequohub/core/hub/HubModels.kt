@@ -17,7 +17,10 @@ data class HubOperationalState(
 data class HubSummaryUi(
     val freeLockerCount: Int,
     val occupiedLockerCount: Int,
+    val underGracePackageCount: Int,
     val feeDuePackageCount: Int,
+    val overduePackageCount: Int,
+    val returnToSellerDueCount: Int,
     val pendingSequoCollectionCount: Int,
     val openIncidentCount: Int,
     val lastSuccessfulSyncLabel: String,
