@@ -241,6 +241,7 @@ private fun SequoHubApp(
             HubWorkflowScreen.Handover -> HandoverScreen(
                 pickupResolution = pickupResolution,
                 returnResolution = returnResolution,
+                connectionState = hubState?.connection ?: HubConnectionState.LocalFallback,
                 onValidatePickup = { code ->
                     scope.launch {
                         pickupResolution = runCatching { hubRepository.resolveManualCode(DemoHubId, code) }.getOrNull()
@@ -344,6 +345,10 @@ private fun SequoHubApp(
             LockerDetailOverlay(
                 locker = locker,
                 onDismiss = { selectedLockerId = null },
+                onPrimaryAction = {
+                    selectedLockerId = null
+                    activeWorkflow = HubWorkflowScreen.Handover
+                },
                 onReportProblem = {},
             )
         }

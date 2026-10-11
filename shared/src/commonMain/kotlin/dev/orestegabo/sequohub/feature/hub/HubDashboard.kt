@@ -305,6 +305,7 @@ private fun AttentionLockerRow(
 fun LockerDetailOverlay(
     locker: LockerUi,
     onDismiss: () -> Unit,
+    onPrimaryAction: (LockerUi) -> Unit = {},
     onReportProblem: (LockerUi) -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -359,9 +360,9 @@ fun LockerDetailOverlay(
 
                 if (locker.feeDueCfa > 0) {
                     FeeNotice(amount = locker.feeDueCfa)
-                    PrimaryActionButton(label = strings.collectFeeOpenLocker)
+                    PrimaryActionButton(label = strings.collectFeeOpenLocker, onClick = { onPrimaryAction(locker) })
                 } else {
-                    PrimaryActionButton(label = locker.primaryAction)
+                    PrimaryActionButton(label = locker.primaryAction, onClick = { onPrimaryAction(locker) })
                 }
 
                 OutlinedButton(

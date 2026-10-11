@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -32,6 +33,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
+import dev.orestegabo.sequohub.core.hub.HubConnectionState
 import dev.orestegabo.sequohub.core.hub.HubScanUiResult
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 
@@ -40,6 +42,7 @@ import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 fun HandoverScreen(
     pickupResolution: HubScanUiResult? = null,
     returnResolution: HubScanUiResult? = null,
+    connectionState: HubConnectionState = HubConnectionState.LocalFallback,
     onValidatePickup: (String) -> Unit,
     onCollectFeeAndOpen: () -> Unit,
     onValidateReturn: (String) -> Unit,
@@ -47,6 +50,8 @@ fun HandoverScreen(
 ) {
     var mode by rememberSaveable { mutableStateOf(HandoverMode.Pickup) }
     var code by rememberSaveable { mutableStateOf("") }
+    var idVerified by rememberSaveable { mutableStateOf(false) }
+    var confirmInProgress by rememberSaveable { mutableStateOf(false) }
     val strings = LocalSequoStrings.current
 
     AppScroll {
@@ -68,6 +73,7 @@ fun HandoverScreen(
                     onClick = {
                         mode = item
                         code = ""
+                        idVerified = false
                     },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = index,
@@ -90,19 +96,22 @@ fun HandoverScreen(
                 onValueChange = { code = cleanCode(it, max = 18) },
                 buttonLabel = strings.validate,
                 onSubmit = {
+                    val submittedCode = code
+                    code = ""
+                    idVerified = false
                     if (mode == HandoverMode.Pickup) {
-                        onValidatePickup(code)
+                        onValidatePickup(submittedCode)
                     } else {
-                        onValidateReturn(code)
+                        onValidateReturn(submittedCode)
                     }
                 },
             )
         }
 
         if (mode == HandoverMode.Pickup) {
-            PickupFeeModal(resolution = pickupResolution, onCollectFeeAndOpen = onCollectFeeAndOpen)
+            PickupFeeModal(resolution = pickupResolution, connectionState = connectionState, idVerified = idVerified, confirmInProgress = confirmInProgress, onIdVerifiedChange = { idVerified = it }, onCollectFeeAndOpen = { confirmInProgress = true; onCollectFeeAndOpen(); confirmInProgress = false })
         } else {
-            ReturnValidationCard(resolution = returnResolution, onReceiveReturn = onReceiveReturn)
+            ReturnValidationCard(resolution = returnResolution, idVerified = idVerified, onIdVerifiedChange = { idVerified = it }, onReceiveReturn = onReceiveReturn)
         }
     }
 }
@@ -147,10 +156,16 @@ fun FeeNotice(amount: Int) {
 @Composable
 private fun PickupFeeModal(
     resolution: HubScanUiResult?,
+    connectionState: HubConnectionState,
+    idVerified: Boolean,
+    confirmInProgress: Boolean,
+    onIdVerifiedChange: (Boolean) -> Unit,
     onCollectFeeAndOpen: () -> Unit,
 ) {
     MinimalCard {
         val strings = LocalSequoStrings.current
+        val blockingMessage = resolution?.blockingReason?.let { handoverBlockingMessage(it) }
+        val canConfirm = resolution != null && blockingMessage == null && idVerified && connectionState == HubConnectionState.Online && !confirmInProgress
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -168,21 +183,51 @@ private fun PickupFeeModal(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            StatusBadge(label = strings.feeDue, tone = BadgeTone.Fee)
+            StatusBadge(label = if (blockingMessage == null) strings.releaseReady else strings.blocked, tone = if (blockingMessage == null) BadgeTone.Active else BadgeTone.Hold)
         }
 
-        DetailRow(label = strings.freeWindow, value = strings.endedTwoDaysAgo)
-        DetailRow(label = strings.storageFee, value = "1,000 CFA")
+        DetailRow(label = strings.packageAndLocker, value = resolution?.let { "${it.displayReference} / ${it.lockerId ?: "-"}" } ?: strings.invalidPickupCode)
+        DetailRow(label = strings.storageFee, value = "${(resolution?.feeDueCfa ?: 0).formatCfa()} CFA")
         DetailRow(label = strings.source, value = strings.backendStorageRules)
-
-        FeeNotice(amount = resolution?.feeDueCfa?.takeIf { it > 0 } ?: 1000)
-        PrimaryActionButton(label = strings.collectFeeOpenLocker, onClick = onCollectFeeAndOpen)
+        blockingMessage?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        if (connectionState != HubConnectionState.Online) {
+            Text(
+                text = strings.backendRequiredForRelease,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        if ((resolution?.feeDueCfa ?: 0) > 0) {
+            FeeNotice(amount = resolution?.feeDueCfa ?: 0)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = idVerified, onCheckedChange = onIdVerifiedChange)
+            Text(strings.verifyCustomerId, style = MaterialTheme.typography.bodyMedium)
+        }
+        PrimaryActionButton(
+            label = strings.confirmHandover,
+            enabled = canConfirm,
+            onClick = onCollectFeeAndOpen,
+        )
     }
 }
 
 @Composable
 private fun ReturnValidationCard(
     resolution: HubScanUiResult?,
+    idVerified: Boolean,
+    onIdVerifiedChange: (Boolean) -> Unit,
     onReceiveReturn: () -> Unit,
 ) {
     MinimalCard {
@@ -209,7 +254,25 @@ private fun ReturnValidationCard(
 
         DetailRow(label = strings.idCheck, value = if (resolution?.identityVerificationRequired != false) strings.requiredBeforeIntake else strings.clear)
         DetailRow(label = strings.refundDecision, value = strings.sequoFinalValidationOnly)
-        PrimaryActionButton(label = strings.receiveReturn, onClick = onReceiveReturn)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Checkbox(checked = idVerified, onCheckedChange = onIdVerifiedChange)
+            Text(strings.verifyCustomerId, style = MaterialTheme.typography.bodyMedium)
+        }
+        PrimaryActionButton(label = strings.receiveReturn, enabled = idVerified, onClick = onReceiveReturn)
+    }
+}
+
+@Composable
+private fun handoverBlockingMessage(reason: String): String {
+    val strings = LocalSequoStrings.current
+    return when (reason) {
+        "credential_already_used", "credential_expired" -> strings.alreadyUsedOrExpired
+        "credential_not_found", "parcel_not_releasable" -> strings.invalidPickupCode
+        else -> strings.invalidPickupCode
     }
 }
 
