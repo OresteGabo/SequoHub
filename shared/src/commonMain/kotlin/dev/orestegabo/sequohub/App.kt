@@ -38,6 +38,7 @@ import dev.orestegabo.sequohub.core.network.ApiHealthUiState
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
 import dev.orestegabo.sequohub.core.hub.DemoHubId
 import dev.orestegabo.sequohub.core.hub.FakeHubRepository
+import dev.orestegabo.sequohub.core.hub.HubCollectionManifestUi
 import dev.orestegabo.sequohub.core.hub.HubConnectionState
 import dev.orestegabo.sequohub.core.hub.HubOperationalState
 import dev.orestegabo.sequohub.core.hub.HubRepository
@@ -112,6 +113,8 @@ private fun SequoHubApp(
     var pickupResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
     var returnResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
     var lastReturnCredential by remember { mutableStateOf<String?>(null) }
+    var collectionManifest by remember { mutableStateOf<HubCollectionManifestUi?>(null) }
+    var lastCollectionManifestCode by remember { mutableStateOf<String?>(null) }
     val authSessionStore = rememberAuthSessionStore()
     val authRepository = remember(authSessionStore) {
         AuthRepository(
@@ -242,6 +245,7 @@ private fun SequoHubApp(
             HubWorkflowScreen.Handover -> HandoverScreen(
                 pickupResolution = pickupResolution,
                 returnResolution = returnResolution,
+                collectionManifest = collectionManifest,
                 connectionState = hubState?.connection ?: HubConnectionState.LocalFallback,
                 onValidatePickup = { code ->
                     scope.launch {
@@ -267,6 +271,24 @@ private fun SequoHubApp(
                         }
                         hubState = hubRepository.loadHubState(DemoHubId, strings)
                         lastReturnCredential = null
+                    }
+                    activeWorkflow = null
+                },
+                onValidateCollection = { code ->
+                    lastCollectionManifestCode = code
+                    scope.launch {
+                        collectionManifest = runCatching { hubRepository.loadCollectionManifest(DemoHubId, code) }.getOrNull()
+                    }
+                },
+                onConfirmCollection = { packageIds ->
+                    val code = lastCollectionManifestCode
+                    scope.launch {
+                        if (!code.isNullOrBlank()) {
+                            runCatching { hubRepository.recordCollectionHandoff(DemoHubId, code, packageIds) }
+                        }
+                        hubState = hubRepository.loadHubState(DemoHubId, strings)
+                        lastCollectionManifestCode = null
+                        collectionManifest = null
                     }
                     activeWorkflow = null
                 },

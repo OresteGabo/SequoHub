@@ -69,3 +69,15 @@ data class HubOperationResult(
     val success: Boolean,
     val safeMessage: String,
 )
+
+data class HubCollectionManifestUi(
+    val manifestCode: String,
+    val packages: List<HubCollectionPackageUi>,
+    val localOnly: Boolean = true,
+)
+
+data class HubCollectionPackageUi(
+    val id: String,
+    val lockerId: String,
+    val label: String,
+)

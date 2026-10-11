@@ -34,6 +34,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
+import dev.orestegabo.sequohub.core.hub.HubCollectionManifestUi
 import dev.orestegabo.sequohub.core.hub.HubConnectionState
 import dev.orestegabo.sequohub.core.hub.HubScanUiResult
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
@@ -43,16 +44,20 @@ import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 fun HandoverScreen(
     pickupResolution: HubScanUiResult? = null,
     returnResolution: HubScanUiResult? = null,
+    collectionManifest: HubCollectionManifestUi? = null,
     connectionState: HubConnectionState = HubConnectionState.LocalFallback,
     onValidatePickup: (String) -> Unit,
     onCollectFeeAndOpen: () -> Unit,
     onValidateReturn: (String) -> Unit,
     onReceiveReturn: (String) -> Unit,
+    onValidateCollection: (String) -> Unit = {},
+    onConfirmCollection: (List<String>) -> Unit = {},
 ) {
     var mode by rememberSaveable { mutableStateOf(HandoverMode.Pickup) }
     var code by rememberSaveable { mutableStateOf("") }
     var idVerified by rememberSaveable { mutableStateOf(false) }
     var returnConditionNote by rememberSaveable { mutableStateOf("") }
+    var selectedCollectionPackageIds by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var confirmInProgress by rememberSaveable { mutableStateOf(false) }
     val strings = LocalSequoStrings.current
 
@@ -77,6 +82,7 @@ fun HandoverScreen(
                         code = ""
                         idVerified = false
                         returnConditionNote = ""
+                        selectedCollectionPackageIds = emptyList()
                     },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = index,
@@ -89,13 +95,21 @@ fun HandoverScreen(
 
         MinimalCard {
             Text(
-                text = if (mode == HandoverMode.Pickup) strings.customerPickup else strings.customerReturn,
+                text = when (mode) {
+                    HandoverMode.Pickup -> strings.customerPickup
+                    HandoverMode.Return -> strings.customerReturn
+                    HandoverMode.Collection -> strings.sequoCollection
+                },
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.titleLarge,
             )
             CodeEntryRow(
                 value = code,
-                placeholder = if (mode == HandoverMode.Pickup) strings.pickupCode else strings.returnCode,
+                placeholder = when (mode) {
+                    HandoverMode.Pickup -> strings.pickupCode
+                    HandoverMode.Return -> strings.returnCode
+                    HandoverMode.Collection -> strings.collectionManifestCode
+                },
                 onValueChange = { code = cleanCode(it, max = 18) },
                 buttonLabel = strings.validate,
                 onSubmit = {
@@ -103,25 +117,37 @@ fun HandoverScreen(
                     code = ""
                     idVerified = false
                     returnConditionNote = ""
-                    if (mode == HandoverMode.Pickup) {
-                        onValidatePickup(submittedCode)
-                    } else {
-                        onValidateReturn(submittedCode)
+                    selectedCollectionPackageIds = emptyList()
+                    when (mode) {
+                        HandoverMode.Pickup -> onValidatePickup(submittedCode)
+                        HandoverMode.Return -> onValidateReturn(submittedCode)
+                        HandoverMode.Collection -> onValidateCollection(submittedCode)
                     }
                 },
             )
         }
 
-        if (mode == HandoverMode.Pickup) {
-            PickupFeeModal(resolution = pickupResolution, connectionState = connectionState, idVerified = idVerified, confirmInProgress = confirmInProgress, onIdVerifiedChange = { idVerified = it }, onCollectFeeAndOpen = { confirmInProgress = true; onCollectFeeAndOpen(); confirmInProgress = false })
-        } else {
-            ReturnValidationCard(
+        when (mode) {
+            HandoverMode.Pickup -> PickupFeeModal(resolution = pickupResolution, connectionState = connectionState, idVerified = idVerified, confirmInProgress = confirmInProgress, onIdVerifiedChange = { idVerified = it }, onCollectFeeAndOpen = { confirmInProgress = true; onCollectFeeAndOpen(); confirmInProgress = false })
+            HandoverMode.Return -> ReturnValidationCard(
                 resolution = returnResolution,
                 idVerified = idVerified,
                 conditionNote = returnConditionNote,
                 onIdVerifiedChange = { idVerified = it },
                 onConditionNoteChange = { returnConditionNote = sanitizeConditionNote(it) },
                 onReceiveReturn = { onReceiveReturn(returnConditionNote) },
+            )
+            HandoverMode.Collection -> CollectionManifestCard(
+                manifest = collectionManifest,
+                selectedPackageIds = selectedCollectionPackageIds,
+                onTogglePackage = { packageId ->
+                    selectedCollectionPackageIds = if (packageId in selectedCollectionPackageIds) {
+                        selectedCollectionPackageIds - packageId
+                    } else {
+                        selectedCollectionPackageIds + packageId
+                    }
+                },
+                onConfirmCollection = { onConfirmCollection(selectedCollectionPackageIds) },
             )
         }
     }
@@ -298,6 +324,68 @@ private fun ReturnValidationCard(
     }
 }
 
+@Composable
+private fun CollectionManifestCard(
+    manifest: HubCollectionManifestUi?,
+    selectedPackageIds: List<String>,
+    onTogglePackage: (String) -> Unit,
+    onConfirmCollection: () -> Unit,
+) {
+    MinimalCard {
+        val strings = LocalSequoStrings.current
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = strings.sequoCollection,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Text(
+                    text = manifest?.manifestCode ?: strings.collectionManifestCode,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            StatusBadge(label = strings.listedPackages, tone = BadgeTone.Neutral)
+        }
+        Text(
+            text = strings.partialCollection,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        manifest?.packages.orEmpty().forEach { item ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = item.id in selectedPackageIds,
+                    onCheckedChange = { onTogglePackage(item.id) },
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(item.id, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("${item.lockerId} · ${item.label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        Text(
+            text = strings.noCollectionEndpoint,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        PrimaryActionButton(
+            label = strings.confirmCollection,
+            enabled = manifest != null && selectedPackageIds.isNotEmpty(),
+            onClick = onConfirmCollection,
+        )
+    }
+}
+
 private fun sanitizeConditionNote(input: String): String =
     input
         .filter { it.isLetterOrDigit() || it.isWhitespace() || it in ".,'/-()" }
@@ -316,6 +404,7 @@ private fun handoverBlockingMessage(reason: String): String {
 private enum class HandoverMode {
     Pickup,
     Return,
+    Collection,
 }
 
 private val HandoverMode.localizedLabel: String
@@ -324,6 +413,7 @@ private val HandoverMode.localizedLabel: String
         return when (this) {
             HandoverMode.Pickup -> strings.pickup
             HandoverMode.Return -> strings.returnPackage
+            HandoverMode.Collection -> strings.sequoCollection
         }
     }
 

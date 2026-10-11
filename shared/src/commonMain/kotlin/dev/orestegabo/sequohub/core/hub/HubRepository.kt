@@ -11,6 +11,8 @@ interface HubRepository {
     suspend fun resolveManualCode(hubId: String, code: String): HubScanUiResult
     suspend fun setLockerMaintenance(hubId: String, lockerId: String, unavailable: Boolean): HubOperationResult
     suspend fun recordReturnDropoff(hubId: String, returnId: String, rawReturnPin: String, conditionNote: String): HubOperationResult
+    suspend fun loadCollectionManifest(hubId: String, manifestCode: String): HubCollectionManifestUi
+    suspend fun recordCollectionHandoff(hubId: String, manifestCode: String, packageIds: List<String>): HubOperationResult
     fun close()
 }
 
@@ -59,6 +61,12 @@ class ApiHubRepository(
         apiClient.recordReturnDropoff(returnId = returnId, relayPointId = hubId, rawReturnPin = rawReturnPin)
         return HubOperationResult(success = true, safeMessage = "Return drop-off synced.")
     }
+
+    override suspend fun loadCollectionManifest(hubId: String, manifestCode: String): HubCollectionManifestUi =
+        localCollectionManifest(manifestCode)
+
+    override suspend fun recordCollectionHandoff(hubId: String, manifestCode: String, packageIds: List<String>): HubOperationResult =
+        HubOperationResult(success = false, safeMessage = "Collection completion API is not available yet.")
 
     override fun close() {
         apiClient.close()
@@ -119,6 +127,12 @@ class FakeHubRepository : HubRepository {
     override suspend fun recordReturnDropoff(hubId: String, returnId: String, rawReturnPin: String, conditionNote: String): HubOperationResult =
         HubOperationResult(success = true, safeMessage = "Return stored locally until hub sync is available.")
 
+    override suspend fun loadCollectionManifest(hubId: String, manifestCode: String): HubCollectionManifestUi =
+        localCollectionManifest(manifestCode)
+
+    override suspend fun recordCollectionHandoff(hubId: String, manifestCode: String, packageIds: List<String>): HubOperationResult =
+        HubOperationResult(success = true, safeMessage = "Collection handoff saved locally until backend manifest completion exists.")
+
     override fun close() = Unit
 }
 
@@ -178,4 +192,14 @@ private fun auditFromSummary(summary: HubSummaryResponse, strings: SequoStrings)
     HubAuditItem(strings.today, strings.synced, summary.lastSuccessfulSyncTimestamp ?: strings.local, HubAuditTone.Active),
     HubAuditItem(strings.today, strings.occupied, summary.occupiedLockerCount.toString(), HubAuditTone.Neutral),
     HubAuditItem(strings.today, strings.feesDue, summary.feeDuePackageCount.toString(), HubAuditTone.Hold),
+)
+
+
+private fun localCollectionManifest(manifestCode: String): HubCollectionManifestUi = HubCollectionManifestUi(
+    manifestCode = manifestCode.takeLast(8).ifBlank { "LOCAL" },
+    packages = listOf(
+        HubCollectionPackageUi(id = "RET-1042", lockerId = "B03", label = "Customer return"),
+        HubCollectionPackageUi(id = "SQ-4482", lockerId = "A04", label = "Overdue parcel"),
+        HubCollectionPackageUi(id = "SQ-4521", lockerId = "D01", label = "Support review"),
+    ),
 )
