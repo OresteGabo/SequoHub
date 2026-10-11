@@ -36,6 +36,12 @@ import dev.orestegabo.sequohub.core.auth.rememberAuthSessionStore
 import dev.orestegabo.sequohub.core.network.ApiHealthClient
 import dev.orestegabo.sequohub.core.network.ApiHealthUiState
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
+import dev.orestegabo.sequohub.core.hub.DemoHubId
+import dev.orestegabo.sequohub.core.hub.FakeHubRepository
+import dev.orestegabo.sequohub.core.hub.HubConnectionState
+import dev.orestegabo.sequohub.core.hub.HubOperationalState
+import dev.orestegabo.sequohub.core.hub.HubRepository
+import dev.orestegabo.sequohub.core.hub.HubScanUiResult
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.stringsFor
 import dev.orestegabo.sequohub.feature.activity.ActivityScreen
@@ -43,7 +49,9 @@ import dev.orestegabo.sequohub.feature.auth.AuthScreen
 import dev.orestegabo.sequohub.feature.hub.HubDashboard
 import dev.orestegabo.sequohub.feature.hub.LockerDetailOverlay
 import dev.orestegabo.sequohub.feature.hub.sampleLockers
+import dev.orestegabo.sequohub.feature.handover.HandoverScreen
 import dev.orestegabo.sequohub.feature.legal.LegalScreen
+import dev.orestegabo.sequohub.feature.scan.ScanReceiveScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsScreen
 import dev.orestegabo.sequohub.feature.settings.SettingsUiState
 import dev.orestegabo.sequohub.feature.settings.ThemeMode
@@ -52,6 +60,11 @@ import dev.orestegabo.sequohub.navigation.MainTab
 import dev.orestegabo.sequohub.navigation.SequoBottomNavigation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+
+private enum class HubWorkflowScreen {
+    Scan,
+    Handover,
+}
 
 @Composable
 @Preview
@@ -93,6 +106,11 @@ private fun SequoHubApp(
     var authErrorMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var googleSignInInProgress by rememberSaveable { mutableStateOf(false) }
     var apiHealthState by remember { mutableStateOf<ApiHealthUiState>(ApiHealthUiState.Idle) }
+    var activeWorkflow by rememberSaveable { mutableStateOf<HubWorkflowScreen?>(null) }
+    var hubState by remember { mutableStateOf<HubOperationalState?>(null) }
+    var scanResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
+    var pickupResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
+    var returnResolution by remember { mutableStateOf<HubScanUiResult?>(null) }
     val authSessionStore = rememberAuthSessionStore()
     val authRepository = remember(authSessionStore) {
         AuthRepository(
@@ -101,21 +119,29 @@ private fun SequoHubApp(
         )
     }
     val apiHealthClient = remember { ApiHealthClient() }
+    val hubRepository: HubRepository = remember { FakeHubRepository() }
     val scope = rememberCoroutineScope()
     val strings = LocalSequoStrings.current
-    val lockers = sampleLockers(strings)
-    val hubBlockedBySequo = false
+    val lockers = hubState?.lockers ?: sampleLockers(strings)
+    val hubBlockedBySequo = hubState?.control?.hubBlockedBySequo ?: false
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
 
-    DisposableEffect(authRepository, apiHealthClient) {
+    DisposableEffect(authRepository, apiHealthClient, hubRepository) {
         onDispose {
             authRepository.close()
             apiHealthClient.close()
+            hubRepository.close()
         }
     }
 
     LaunchedEffect(authRepository) {
         isAuthenticated = authRepository.getSavedSession() != null
+    }
+
+    LaunchedEffect(isAuthenticated, strings, hubRepository) {
+        if (isAuthenticated) {
+            hubState = runCatching { hubRepository.loadHubState(DemoHubId, strings) }.getOrNull()
+        }
     }
 
     if (showSplash) {
@@ -197,13 +223,52 @@ private fun SequoHubApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        when (selectedTab) {
+        when (activeWorkflow) {
+            HubWorkflowScreen.Scan -> ScanReceiveScreen(
+                scanResult = scanResolution,
+                connectionState = hubState?.connection ?: HubConnectionState.LocalFallback,
+                onStartCameraScan = {},
+                onResolveManualCode = { code ->
+                    scope.launch {
+                        scanResolution = runCatching { hubRepository.resolveManualCode(DemoHubId, code) }.getOrNull()
+                    }
+                },
+                onAssignLocker = {
+                    scope.launch { hubState = hubRepository.loadHubState(DemoHubId, strings) }
+                    activeWorkflow = null
+                },
+            )
+            HubWorkflowScreen.Handover -> HandoverScreen(
+                pickupResolution = pickupResolution,
+                returnResolution = returnResolution,
+                onValidatePickup = { code ->
+                    scope.launch {
+                        pickupResolution = runCatching { hubRepository.resolveManualCode(DemoHubId, code) }.getOrNull()
+                    }
+                },
+                onCollectFeeAndOpen = {
+                    scope.launch { hubState = hubRepository.loadHubState(DemoHubId, strings) }
+                    activeWorkflow = null
+                },
+                onValidateReturn = { code ->
+                    scope.launch {
+                        returnResolution = runCatching { hubRepository.resolveManualCode(DemoHubId, code) }.getOrNull()
+                    }
+                },
+                onReceiveReturn = {
+                    scope.launch { hubState = hubRepository.loadHubState(DemoHubId, strings) }
+                    activeWorkflow = null
+                },
+            )
+            null -> when (selectedTab) {
             MainTab.Hub -> HubDashboard(
                 lockers = lockers,
                 hubBlockedBySequo = hubBlockedBySequo,
+                operationalState = hubState,
                 onLockerTap = { selectedLockerId = it.id },
             )
             MainTab.Activity -> ActivityScreen(
+                auditItems = hubState?.auditItems.orEmpty(),
                 onNotificationsRefresh = {},
                 onNotificationRead = {},
                 onNotificationArchive = {},
@@ -248,9 +313,12 @@ private fun SequoHubApp(
                 onDeleteAccount = {},
             )
         }
+        }
 
         FloatingActionButton(
-            onClick = {},
+            onClick = {
+                activeWorkflow = if (activeWorkflow == null) HubWorkflowScreen.Scan else null
+            },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier

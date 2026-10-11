@@ -29,6 +29,8 @@ import dev.orestegabo.sequohub.core.designsystem.component.MinimalCard
 import dev.orestegabo.sequohub.core.designsystem.component.SectionTitle
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
+import dev.orestegabo.sequohub.core.hub.HubAuditItem
+import dev.orestegabo.sequohub.core.hub.HubAuditTone
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.SequoStrings
 import dev.orestegabo.sequohub.feature.notifications.NotificationInboxPanel
@@ -37,6 +39,7 @@ import dev.orestegabo.sequohub.feature.notifications.sampleNotifications
 
 @Composable
 fun ActivityScreen(
+    auditItems: List<HubAuditItem> = emptyList(),
     onNotificationsRefresh: () -> Unit,
     onNotificationRead: (NotificationMessageUi) -> Unit,
     onNotificationArchive: (NotificationMessageUi) -> Unit,
@@ -72,7 +75,7 @@ fun ActivityScreen(
         }
 
         when (selectedTab) {
-            0 -> AuditTimeline(strings)
+            0 -> AuditTimeline(strings, auditItems)
             else -> MinimalCard {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -127,33 +130,32 @@ fun ActivityScreen(
 }
 
 @Composable
-private fun AuditTimeline(strings: SequoStrings) {
-    MinimalCard {
-        ActivityItem(
-            time = "09:42",
-            title = strings.pickupReady,
-            subtitle = "A04 - ${strings.collectBeforeRelease}",
-            tone = BadgeTone.Active,
-        )
-        ActivityItem(
-            time = "09:18",
-            title = strings.receiveReturn,
-            subtitle = "B03 - ${strings.sealedOk}",
-            tone = BadgeTone.New,
-        )
-        ActivityItem(
-            time = "08:55",
-            title = strings.needsAttention,
-            subtitle = "D02 - ${strings.damaged}",
-            tone = BadgeTone.Hold,
-        )
-        ActivityItem(
-            time = "08:20",
-            title = strings.packageStored,
-            subtitle = "COL-1042",
-            tone = BadgeTone.Neutral,
+private fun AuditTimeline(strings: SequoStrings, auditItems: List<HubAuditItem>) {
+    val visibleItems = auditItems.ifEmpty {
+        listOf(
+            HubAuditItem("09:42", strings.pickupReady, "A04 - ${strings.collectBeforeRelease}", HubAuditTone.Active),
+            HubAuditItem("09:18", strings.receiveReturn, "B03 - ${strings.sealedOk}", HubAuditTone.New),
+            HubAuditItem("08:55", strings.needsAttention, "D02 - ${strings.damaged}", HubAuditTone.Hold),
+            HubAuditItem("08:20", strings.packageStored, "COL-1042", HubAuditTone.Neutral),
         )
     }
+    MinimalCard {
+        visibleItems.forEach { item ->
+            ActivityItem(
+                time = item.timeLabel,
+                title = item.title,
+                subtitle = item.subtitle,
+                tone = item.tone.toBadgeTone(),
+            )
+        }
+    }
+}
+
+private fun HubAuditTone.toBadgeTone(): BadgeTone = when (this) {
+    HubAuditTone.Active -> BadgeTone.Active
+    HubAuditTone.New -> BadgeTone.New
+    HubAuditTone.Hold -> BadgeTone.Hold
+    HubAuditTone.Neutral -> BadgeTone.Neutral
 }
 
 @Composable

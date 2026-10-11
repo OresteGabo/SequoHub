@@ -32,11 +32,14 @@ import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.StatusBadge
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
+import dev.orestegabo.sequohub.core.hub.HubScanUiResult
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HandoverScreen(
+    pickupResolution: HubScanUiResult? = null,
+    returnResolution: HubScanUiResult? = null,
     onValidatePickup: (String) -> Unit,
     onCollectFeeAndOpen: () -> Unit,
     onValidateReturn: (String) -> Unit,
@@ -97,9 +100,9 @@ fun HandoverScreen(
         }
 
         if (mode == HandoverMode.Pickup) {
-            PickupFeeModal(onCollectFeeAndOpen = onCollectFeeAndOpen)
+            PickupFeeModal(resolution = pickupResolution, onCollectFeeAndOpen = onCollectFeeAndOpen)
         } else {
-            ReturnValidationCard(onReceiveReturn = onReceiveReturn)
+            ReturnValidationCard(resolution = returnResolution, onReceiveReturn = onReceiveReturn)
         }
     }
 }
@@ -143,6 +146,7 @@ fun FeeNotice(amount: Int) {
 
 @Composable
 private fun PickupFeeModal(
+    resolution: HubScanUiResult?,
     onCollectFeeAndOpen: () -> Unit,
 ) {
     MinimalCard {
@@ -159,7 +163,7 @@ private fun PickupFeeModal(
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
-                    text = "Locker A04 - Package SQ-4482",
+                    text = resolution?.let { "Locker ${it.lockerId ?: "-"} - ${it.displayReference}" } ?: "Locker A04 - Package SQ-4482",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -171,13 +175,14 @@ private fun PickupFeeModal(
         DetailRow(label = strings.storageFee, value = "1,000 CFA")
         DetailRow(label = strings.source, value = strings.backendStorageRules)
 
-        FeeNotice(amount = 1000)
+        FeeNotice(amount = resolution?.feeDueCfa?.takeIf { it > 0 } ?: 1000)
         PrimaryActionButton(label = strings.collectFeeOpenLocker, onClick = onCollectFeeAndOpen)
     }
 }
 
 @Composable
 private fun ReturnValidationCard(
+    resolution: HubScanUiResult?,
     onReceiveReturn: () -> Unit,
 ) {
     MinimalCard {
@@ -202,7 +207,7 @@ private fun ReturnValidationCard(
             StatusBadge(label = "72h", tone = BadgeTone.New)
         }
 
-        DetailRow(label = strings.idCheck, value = strings.requiredBeforeIntake)
+        DetailRow(label = strings.idCheck, value = if (resolution?.identityVerificationRequired != false) strings.requiredBeforeIntake else strings.clear)
         DetailRow(label = strings.refundDecision, value = strings.sequoFinalValidationOnly)
         PrimaryActionButton(label = strings.receiveReturn, onClick = onReceiveReturn)
     }

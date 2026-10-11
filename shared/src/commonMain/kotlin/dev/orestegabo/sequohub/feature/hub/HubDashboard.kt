@@ -52,6 +52,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.badgeColors
 import dev.orestegabo.sequohub.core.designsystem.component.statusColors
 import dev.orestegabo.sequohub.core.designsystem.theme.SequoSemanticColors
+import dev.orestegabo.sequohub.core.hub.HubOperationalState
 import dev.orestegabo.sequohub.core.designsystem.theme.sequoSemanticColors
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.SequoStrings
@@ -61,18 +62,21 @@ import dev.orestegabo.sequohub.feature.handover.FeeNotice
 fun HubDashboard(
     lockers: List<LockerUi>,
     hubBlockedBySequo: Boolean = false,
+    operationalState: HubOperationalState? = null,
     onLockerTap: (LockerUi) -> Unit,
 ) {
     val strings = LocalSequoStrings.current
-    val pendingSyncCount = lockers.count { it.syncState != LockerSyncState.Synced }
-    val attentionLockers = lockers.filter { it.needsAttention }
+    val effectiveLockers = operationalState?.lockers ?: lockers
+    val effectiveBlocked = operationalState?.control?.hubBlockedBySequo ?: hubBlockedBySequo
+    val pendingSyncCount = effectiveLockers.count { it.syncState != LockerSyncState.Synced }
+    val attentionLockers = effectiveLockers.filter { it.needsAttention }
 
     AppScroll {
         TopHeader(
             eyebrow = strings.pointDeRelai,
             title = strings.hubDashboard,
-            subtitle = "Lomé Relay 04",
-            status = if (hubBlockedBySequo) {
+            subtitle = operationalState?.displayName ?: "Lome Relay 04",
+            status = if (effectiveBlocked) {
                 strings.blocked
             } else if (pendingSyncCount == 0) {
                 strings.synced
@@ -90,13 +94,13 @@ fun HubDashboard(
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = strings.occupied,
-                value = "17",
-                note = "25 ${strings.locker.lowercase()}s",
+                value = (operationalState?.summary?.occupiedLockerCount ?: effectiveLockers.count { it.state == LockerState.Occupied }).toString(),
+                note = "${effectiveLockers.size} ${strings.locker.lowercase()}s",
             )
             MetricCard(
                 modifier = Modifier.weight(1f),
                 label = strings.feesDue,
-                value = "3",
+                value = (operationalState?.summary?.feeDuePackageCount ?: effectiveLockers.count { it.feeDueCfa > 0 }).toString(),
                 note = strings.today,
             )
             MetricCard(
@@ -108,8 +112,8 @@ fun HubDashboard(
         }
 
         LockerGridCard(
-            lockers = lockers,
-            hubBlockedBySequo = hubBlockedBySequo,
+            lockers = effectiveLockers,
+            hubBlockedBySequo = effectiveBlocked,
             onLockerTap = onLockerTap,
         )
 

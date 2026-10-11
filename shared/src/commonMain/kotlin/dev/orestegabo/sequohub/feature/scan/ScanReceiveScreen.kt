@@ -38,11 +38,15 @@ import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
 import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
+import dev.orestegabo.sequohub.core.hub.HubConnectionState
+import dev.orestegabo.sequohub.core.hub.HubScanUiResult
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanReceiveScreen(
+    scanResult: HubScanUiResult? = null,
+    connectionState: HubConnectionState = HubConnectionState.LocalFallback,
     onStartCameraScan: () -> Unit,
     onResolveManualCode: (String) -> Unit,
     onAssignLocker: () -> Unit,
@@ -74,6 +78,28 @@ fun ScanReceiveScreen(
                 buttonLabel = strings.resolve,
                 onSubmit = { onResolveManualCode(manualCode) },
             )
+            scanResult?.let { result ->
+                Text(
+                    text = "${result.workflowType} · ${result.displayReference}",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                result.blockingReason?.let { reason ->
+                    Text(
+                        text = reason,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            if (connectionState != HubConnectionState.Online) {
+                Text(
+                    text = strings.local,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
         }
 
         MinimalCard {
