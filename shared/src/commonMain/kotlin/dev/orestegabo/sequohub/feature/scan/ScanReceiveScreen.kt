@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.designsystem.component.AppScroll
 import dev.orestegabo.sequohub.core.designsystem.component.CodeEntryRow
+import dev.orestegabo.sequohub.core.designsystem.component.DetailRow
 import dev.orestegabo.sequohub.core.designsystem.component.MinimalCard
 import dev.orestegabo.sequohub.core.designsystem.component.PrimaryActionButton
 import dev.orestegabo.sequohub.core.designsystem.component.SequoHubShapes
@@ -40,6 +41,7 @@ import dev.orestegabo.sequohub.core.designsystem.component.TopHeader
 import dev.orestegabo.sequohub.core.designsystem.component.cleanCode
 import dev.orestegabo.sequohub.core.hub.HubConnectionState
 import dev.orestegabo.sequohub.core.hub.HubScanUiResult
+import dev.orestegabo.sequohub.core.hub.HubWorkflowTypeUi
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +56,11 @@ fun ScanReceiveScreen(
     var manualCode by rememberSaveable { mutableStateOf("") }
     var selectedCondition by rememberSaveable { mutableStateOf(ConditionFlag.SealedOk) }
     val strings = LocalSequoStrings.current
+    val packageResolved = scanResult?.workflowType == HubWorkflowTypeUi.PackageIntake
+    val blocked = scanResult?.blockingReason != null || (scanResult != null && !packageResolved)
+    val backendValidated = scanResult != null && connectionState == HubConnectionState.Online
+    val canConfirmStorage = packageResolved && !blocked && backendValidated
+    val assignedLocker = scanResult?.lockerId ?: "C05"
 
     AppScroll {
         TopHeader(
@@ -79,23 +86,16 @@ fun ScanReceiveScreen(
                 onSubmit = { onResolveManualCode(manualCode) },
             )
             scanResult?.let { result ->
-                Text(
-                    text = "${result.workflowType} · ${result.displayReference}",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
+                ScanResolutionCard(
+                    result = result,
+                    backendValidated = backendValidated,
+                    packageResolved = packageResolved,
+                    blocked = blocked,
                 )
-                result.blockingReason?.let { reason ->
-                    Text(
-                        text = reason,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
             }
             if (connectionState != HubConnectionState.Online) {
                 Text(
-                    text = strings.local,
+                    text = strings.localValidationOnly,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -123,7 +123,18 @@ fun ScanReceiveScreen(
                     )
                 }
             }
-            IntakeAssignment(onAssignLocker = onAssignLocker)
+            IntakeAssignment(
+                assignedLocker = assignedLocker,
+                canConfirmStorage = canConfirmStorage,
+                onAssignLocker = onAssignLocker,
+            )
+            if (!canConfirmStorage) {
+                Text(
+                    text = if (blocked) strings.packageNotEligible else strings.storageBlockedOffline,
+                    color = if (blocked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -187,7 +198,52 @@ private fun ScannerLaunchPanel(
 }
 
 @Composable
+private fun ScanResolutionCard(
+    result: HubScanUiResult,
+    backendValidated: Boolean,
+    packageResolved: Boolean,
+    blocked: Boolean,
+) {
+    val strings = LocalSequoStrings.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = SequoHubShapes.Small,
+        color = if (blocked) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.62f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.46f),
+        border = BorderStroke(1.dp, if (blocked) MaterialTheme.colorScheme.error.copy(alpha = 0.32f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.24f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DetailRow(label = strings.reference, value = result.displayReference)
+            DetailRow(label = strings.expectedHubCheck, value = if (packageResolved && !blocked) strings.packageEligible else strings.wrongHubOrUnknown)
+            DetailRow(label = strings.singleUseCredential, value = if (backendValidated) strings.backendValidated else strings.localValidationOnly)
+            result.blockingReason?.let {
+                Text(
+                    text = safeBlockingMessage(it),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun safeBlockingMessage(reason: String): String {
+    val strings = LocalSequoStrings.current
+    return when (reason) {
+        "package_already_intaken", "credential_already_used" -> strings.packageNotEligible
+        "credential_expired", "credential_not_found", "parcel_not_releasable" -> strings.wrongHubOrUnknown
+        else -> strings.packageNotEligible
+    }
+}
+
+@Composable
 private fun IntakeAssignment(
+    assignedLocker: String,
+    canConfirmStorage: Boolean,
     onAssignLocker: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -220,7 +276,7 @@ private fun IntakeAssignment(
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Text(
-                        text = "C05",
+                        text = assignedLocker,
                         color = colorScheme.onSurface,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
@@ -228,8 +284,9 @@ private fun IntakeAssignment(
                 }
             }
             PrimaryActionButton(
-                modifier = Modifier.width(116.dp),
-                label = strings.assign,
+                modifier = Modifier.width(150.dp),
+                label = if (canConfirmStorage) strings.confirmStorage else strings.assign,
+                enabled = canConfirmStorage,
                 onClick = onAssignLocker,
             )
         }
