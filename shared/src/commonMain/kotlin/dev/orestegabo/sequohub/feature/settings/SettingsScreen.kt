@@ -84,6 +84,8 @@ fun SettingsScreen(
     onCheckApiHealth: () -> Unit,
     onLogout: () -> Unit,
     onDeleteAccount: () -> Unit,
+    pendingAdminLoginRequestCount: Int = 0,
+    onAdminLoginRequestsClick: () -> Unit = {},
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -107,6 +109,8 @@ fun SettingsScreen(
             onDeleteAccountClick = { showDeleteDialog = true },
             apiHealthState = apiHealthState,
             onCheckApiHealth = onCheckApiHealth,
+            pendingAdminLoginRequestCount = pendingAdminLoginRequestCount,
+            onAdminLoginRequestsClick = onAdminLoginRequestsClick,
         )
         SettingsPage.LockerClosure -> LockerClosurePage(
             lockers = lockers,
@@ -187,6 +191,8 @@ private fun SettingsMainPage(
     onDeleteAccountClick: () -> Unit,
     apiHealthState: ApiHealthUiState,
     onCheckApiHealth: () -> Unit,
+    pendingAdminLoginRequestCount: Int,
+    onAdminLoginRequestsClick: () -> Unit,
 ) {
     val strings = LocalSequoStrings.current
     AppScroll {
@@ -314,6 +320,17 @@ private fun SettingsMainPage(
         }
 
         SettingsSection(title = strings.notifications) {
+            if (pendingAdminLoginRequestCount > 0) {
+                SettingsRow(
+                    icon = Icons.Filled.Notifications,
+                    title = strings.adminLoginRequests,
+                    subtitle = strings.adminLoginWarning,
+                    trailingText = pendingAdminLoginRequestCount.toString(),
+                    showChevron = true,
+                    onClick = onAdminLoginRequestsClick,
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
+            }
             SettingsRow(
                 icon = Icons.Filled.Notifications,
                 title = strings.pushAlerts,
