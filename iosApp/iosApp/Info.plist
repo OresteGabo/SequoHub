@@ -18,9 +18,9 @@
 		</dict>
 	</dict>
 	<key>CLIENT_ID</key>
-	<string>543119759762-ehcnb5lpi883c94457ogrgqsd0nshde2.apps.googleusercontent.com</string>
+	<string>92804430098-7b5av9tn51hls6qi6a7ucooshefk8m6i.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.543119759762-ehcnb5lpi883c94457ogrgqsd0nshde2</string>
+	<string>com.googleusercontent.apps.92804430098-7b5av9tn51hls6qi6a7ucooshefk8m6i</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
@@ -30,7 +30,7 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.543119759762-ehcnb5lpi883c94457ogrgqsd0nshde2</string>
+				<string>com.googleusercontent.apps.92804430098-7b5av9tn51hls6qi6a7ucooshefk8m6i</string>
 			</array>
 		</dict>
 	</array>
