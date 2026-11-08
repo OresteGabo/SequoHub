@@ -17,7 +17,6 @@ import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import dev.orestegabo.sequohub.core.auth.GoogleSignInResult
-import org.json.JSONObject
 import java.security.SecureRandom
 
 private const val GoogleSignInTag = "SequoGoogleSignIn"
@@ -65,10 +64,7 @@ class MainActivity : ComponentActivity() {
                     Log.w(GoogleSignInTag, "Google credential did not include an ID token.")
                     return GoogleSignInResult.Failure("Google ID token missing. Check OAuth client configuration.")
                 }
-                Log.d(
-                    GoogleSignInTag,
-                    "Google ID token received for ${googleCredential.id}; length=${googleCredential.idToken.length}; ${googleCredential.idToken.safeGoogleTokenSummary()}",
-                )
+                Log.d(GoogleSignInTag, "Google credential received.")
                 GoogleSignInResult.Success(
                     idToken = googleCredential.idToken,
                     displayName = googleCredential.displayName,
@@ -82,13 +78,13 @@ class MainActivity : ComponentActivity() {
             Log.d(GoogleSignInTag, "Google sign-in was cancelled.")
             GoogleSignInResult.Cancelled
         } catch (error: GoogleIdTokenParsingException) {
-            Log.e(GoogleSignInTag, "Google returned an invalid ID token credential.", error)
+            Log.e(GoogleSignInTag, "Google returned an invalid ID token credential.")
             GoogleSignInResult.Failure("Google returned an invalid sign-in response. Please update Google Play services and try again.")
         } catch (error: GetCredentialException) {
-            Log.e(GoogleSignInTag, "Credential Manager failed.", error)
+            Log.e(GoogleSignInTag, "Credential Manager failed (${error::class.simpleName}).")
             GoogleSignInResult.Failure(error.message ?: "Google sign-in failed.")
         } catch (error: IllegalArgumentException) {
-            Log.e(GoogleSignInTag, "Google sign-in response was invalid.", error)
+            Log.e(GoogleSignInTag, "Google sign-in response was invalid.")
             GoogleSignInResult.Failure(error.message ?: "Google sign-in response was invalid.")
         }
     }
@@ -98,17 +94,6 @@ class MainActivity : ComponentActivity() {
         secureRandom.nextBytes(bytes)
         return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
     }
-
-    private fun String.safeGoogleTokenSummary(): String =
-        runCatching {
-            val payload = split('.').getOrNull(1).orEmpty()
-            val paddedPayload = payload.padEnd(payload.length + (4 - payload.length % 4) % 4, '=')
-            val json = JSONObject(
-                String(Base64.decode(paddedPayload, Base64.URL_SAFE or Base64.NO_WRAP)),
-            )
-            "aud=${json.optString("aud", "missing")} iss=${json.optString("iss", "missing")} " +
-                "emailVerified=${json.opt("email_verified") ?: "missing"} subPresent=${json.optString("sub").isNotBlank()}"
-        }.getOrDefault("claims=unreadable")
 }
 
 @Preview

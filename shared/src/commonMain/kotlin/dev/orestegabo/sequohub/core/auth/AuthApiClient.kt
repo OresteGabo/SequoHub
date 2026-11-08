@@ -17,10 +17,11 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.SerialName
 
 class AuthApiClient(
-    private val baseUrl: String = NetworkConfig.ProductionBaseUrl,
+    private val baseUrl: String = NetworkConfig.BaseUrl,
     private val httpClient: HttpClient = createSequoHttpClient(baseUrl),
 ) {
     suspend fun loginWithGoogle(idToken: String): AuthApiResponse {
+        val deviceId = "hub-${hubOperationId()}"
         val response = try {
             httpClient.post("${baseUrl.trimEnd('/')}/api/auth/login/social") {
                 headers.append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -28,6 +29,8 @@ class AuthApiClient(
                     SocialLoginRequest(
                         provider = SocialLoginProvider.Google,
                         token = idToken,
+                        appSource = "SEQUO_HUB",
+                        deviceId = deviceId,
                     ),
                 )
             }
@@ -38,7 +41,8 @@ class AuthApiClient(
                 cause = error,
             )
         }
-        return response.toAuthApiResponse()
+        val actual = response.toAuthApiResponse()
+        return actual.copy(session = actual.session.copy(deviceId = deviceId))
     }
 
     fun close() {
@@ -105,12 +109,15 @@ data class AuthSession(
     val accessToken: String,
     val refreshToken: String,
     val expiresIn: Long,
+    val deviceId: String? = null,
 )
 
 @Serializable
 private data class SocialLoginRequest(
     val provider: SocialLoginProvider,
     val token: String,
+    val appSource: String,
+    val deviceId: String,
 )
 
 @Serializable

@@ -22,6 +22,10 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
+val sequoEnvironment = providers.gradleProperty("sequoEnvironment").orElse("PRODUCTION").get()
+val sequoReleaseId = providers.gradleProperty("sequoReleaseId").orNull
+val sequoAcceptance = sequoEnvironment != "PRODUCTION"
+
 android {
     namespace = "dev.orestegabo.sequohub"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -32,6 +36,8 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["sequoCleartextTraffic"] = "false"
+        manifestPlaceholders["sequoAppLabel"] = if(sequoAcceptance) "SequoHub [$sequoEnvironment]" else "SequoHub"
     }
     packaging {
         resources {
@@ -39,6 +45,13 @@ android {
         }
     }
     buildTypes {
+        debug {
+            if(sequoAcceptance) {
+                applicationIdSuffix = if(sequoEnvironment == "LOCAL_FIXTURE") ".fixture" else ".staging"
+                versionNameSuffix = "-${sequoReleaseId ?: "acceptance"}"
+            }
+            manifestPlaceholders["sequoCleartextTraffic"] = (sequoEnvironment == "LOCAL_FIXTURE").toString()
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

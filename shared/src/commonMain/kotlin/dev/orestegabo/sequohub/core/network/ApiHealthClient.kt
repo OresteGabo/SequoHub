@@ -9,7 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
 class ApiHealthClient(
-    private val baseUrl: String = NetworkConfig.ProductionBaseUrl,
+    private val baseUrl: String = NetworkConfig.BaseUrl,
     private val httpClient: HttpClient = createSequoHttpClient(baseUrl),
     private val json: Json = defaultNetworkJson,
 ) {

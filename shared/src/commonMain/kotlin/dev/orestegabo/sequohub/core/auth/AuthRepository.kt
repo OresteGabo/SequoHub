@@ -10,7 +10,6 @@ class AuthRepository(
             throw GoogleIdTokenMissingException()
         }
 
-        logger.logGoogleIdToken(idToken)
         val response = authApiClient.loginWithGoogle(idToken)
         logger.logBackendStatus(response.statusCode)
         sessionStore.save(response.session)
@@ -35,7 +34,7 @@ class GoogleIdTokenMissingException : Exception(
 
 object AuthDebugLogger {
     fun logGoogleIdToken(idToken: String) {
-        println("Google sign-in idToken present=${idToken.isNotBlank()} length=${idToken.length}")
+        // Token values and token metadata are not diagnostic output.
     }
 
     fun logBackendStatus(statusCode: Int) {
