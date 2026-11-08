@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
+import dev.orestegabo.sequo.design.SequoActionButton as Button
+import dev.orestegabo.sequo.design.SequoDesign
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -34,10 +35,9 @@ fun PrimaryActionButton(
     onClick: () -> Unit = {},
 ) {
     Button(
-        modifier = modifier.height(56.dp),
+        modifier = modifier.height(SequoDesign.ControlHeight),
         onClick = onClick,
         enabled = enabled,
-        shape = SequoHubShapes.Small,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -76,12 +76,12 @@ fun CodeEntryRow(
                 capitalization = KeyboardCapitalization.Characters,
                 keyboardType = KeyboardType.Ascii,
             ),
-            shape = SequoHubShapes.Small,
+            shape = MaterialTheme.shapes.extraSmall,
         )
         PrimaryActionButton(
             modifier = Modifier
                 .width(108.dp)
-                .height(56.dp),
+                .height(SequoDesign.ControlHeight),
             label = buttonLabel,
             enabled = value.length >= 4,
             onClick = onSubmit,

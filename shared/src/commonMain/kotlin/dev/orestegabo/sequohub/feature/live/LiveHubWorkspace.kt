@@ -1,13 +1,27 @@
 package dev.orestegabo.sequohub.feature.live
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.AssignmentReturn
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import dev.orestegabo.sequo.design.*
+import dev.orestegabo.sequo.design.SequoActionButton as Button
+import dev.orestegabo.sequo.design.SequoOutlineButton as OutlinedButton
 import dev.orestegabo.sequohub.core.auth.*
 import dev.orestegabo.sequohub.core.hub.*
 import dev.orestegabo.sequohub.core.network.*
@@ -43,7 +57,7 @@ fun HubSessionGate(settings: SettingsUiState, onSettingsChange: (SettingsUiState
         return
     }
     if (legal) { HubBackHandler(true) { legal = false }; LegalScreen(onBack = { legal = false }); return }
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
         Box(Modifier.weight(1f)) { AuthScreen(language = settings.language, onLanguageChange = { onSettingsChange(settings.copy(language = it)) },
             onLogin = { error = t("Email/password sign-in is not connected in this app. Use an available verified provider or the labelled demo.", "La connexion par e-mail n'est pas connectée dans cette app. Utilisez un fournisseur vérifié disponible ou la démo indiquée.") },
             googleSignInInProgress = busy,
@@ -146,17 +160,30 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
     }
     HubBackHandler(selected != null || tab != 0 || legal) { when { legal -> legal = false; selected != null -> { selected = null; clearCredential() }; else -> tab = 0 } }
     if (legal) { LegalScreen(onBack = { legal = false }); return }
-    Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) { Text("SEQUO HUB", style = MaterialTheme.typography.titleLarge); Text(site?.name ?: t("Assigned relay", "Relais affecté"), style = MaterialTheme.typography.bodyMedium) }
-            TextButton(enabled = !busy, onClick = { refresh() }) { Text(t("Refresh", "Actualiser")) }
-        }
-        if(NetworkConfig.IsLocalFixture) Text("LOCAL FIXTURE · ${NetworkConfig.ReleaseId}", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.labelSmall)
-        TextButton(enabled = !busy, onClick = { snapshot = null; inbox = null; pending = null; clearCredential(); onLogout() }) { Text(t("Sign out", "Se déconnecter")) }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
+        val destinations = listOf(
+            SequoNavDestination("0", t("Hub", "Relais"), Icons.Filled.GridView),
+            SequoNavDestination("1", t("Returns", "Retours"), Icons.AutoMirrored.Filled.AssignmentReturn),
+            SequoNavDestination("2", t("History", "Historique"), Icons.Filled.History),
+            SequoNavDestination("3", t("Settings", "Réglages"), Icons.Filled.Settings),
+        )
+        SequoPageHeader(
+            title = destinations[tab].label,
+            subtitle = "SEQUO HUB · " + (site?.name ?: t("Assigned relay", "Relais affecté")),
+            actions = {
+                IconButton(enabled = !busy, onClick = { refresh() }) {
+                    Icon(Icons.Filled.Refresh, contentDescription = t("Refresh", "Actualiser"))
+                }
+                IconButton(enabled = !busy, onClick = { snapshot = null; inbox = null; pending = null; clearCredential(); onLogout() }) {
+                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = t("Sign out", "Se déconnecter"))
+                }
+            },
+        )
+        if(NetworkConfig.IsLocalFixture) Text("LOCAL FIXTURE · ${NetworkConfig.ReleaseId}", Modifier.padding(horizontal = SequoDesign.ScreenGutter), style = MaterialTheme.typography.labelSmall)
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = SequoDesign.ScreenGutter, vertical = SequoDesign.SectionGap), verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap)) {
             if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }; notice?.let { Text(it) }
-            pending?.let { intent -> Surface(color = MaterialTheme.colorScheme.tertiaryContainer) { Column(Modifier.padding(14.dp)) {
+            pending?.let { intent -> Surface(color = MaterialTheme.colorScheme.tertiaryContainer) { Column(Modifier.padding(SequoDesign.CardPadding)) {
                 Text(t("The result is uncertain. Retry the identical request or refresh before a new action. Leaving this session discards the local retry.", "Résultat incertain. Réessayez la même demande ou actualisez avant une nouvelle action. Quitter la session efface cette reprise locale."))
                 TextButton(enabled = !busy, onClick = { runWrite(intent) }) { Text(t("Retry same action", "Réessayer la même action")) }
                 TextButton(enabled = !busy, onClick = { pending = null; refresh() }) { Text(t("Refresh and review", "Actualiser et vérifier")) }
@@ -170,15 +197,15 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     OutlinedButton(enabled = false, onClick = {}) { Text(t("Camera scanner unavailable", "Lecteur QR caméra indisponible")) }
                     Text(t("Logical slots", "Emplacements logiques"), style = MaterialTheme.typography.titleMedium)
                     if(actual.slots.isEmpty()) Text(t("No storage slots are configured.", "Aucun emplacement n'est configuré."))
-                    actual.slots.chunked(3).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { row.forEach { slot -> OutlinedCard(Modifier.weight(1f)) { Column(Modifier.padding(12.dp)) { Text(slot.lockerCode, style = if(settings.largeLockerLabels) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyMedium); Text(hubStatus(slot.status, settings.language), style = MaterialTheme.typography.labelSmall) } } } } }
+                    actual.slots.chunked(3).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) { row.forEach { slot -> SequoPanel(Modifier.weight(1f)) { Column(Modifier.padding(SequoDesign.CardPadding)) { Text(slot.lockerCode, style = if(settings.largeLockerLabels) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyMedium); Text(hubStatus(slot.status, settings.language), style = MaterialTheme.typography.labelSmall) } } } } }
                     Text(t("Parcels", "Colis"), style = MaterialTheme.typography.titleMedium)
                     if(actual.parcels.isEmpty()) Text(t("No parcel records at this relay.", "Aucun colis enregistré dans ce relais."))
-                    actual.parcels.forEach { parcel -> OutlinedCard(onClick = { selected = parcel; clearCredential(); note = "" }, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(14.dp)) { Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(hubHistoryTimestamp(it), style = MaterialTheme.typography.bodySmall) }
+                    actual.parcels.forEach { parcel -> SequoPanel(Modifier.fillMaxWidth().clip(SequoDesign.CardShape).clickable(role = Role.Button) { selected = parcel; clearCredential(); note = "" }) {
+                        Column(Modifier.padding(SequoDesign.CardPadding)) { Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(hubHistoryTimestamp(it), style = MaterialTheme.typography.bodySmall) }
                             if(parcel.custody?.reviewDue == true) Text(t("Operator review due", "Revue opérateur requise"), color = MaterialTheme.colorScheme.error)
                         }
                     } }
-                    OutlinedTextField(value = raw, onValueChange = { raw = it.take(256) }, label = { Text(t("Manual QR / pickup code", "QR manuel / code de retrait")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(value = raw, onValueChange = { raw = it.take(256) }, label = { Text(t("Manual QR / pickup code", "QR manuel / code de retrait")) }, modifier = Modifier.fillMaxWidth())
                     Button(enabled = !busy && pending == null && raw.isNotBlank(), onClick = { val credential = raw; scope.launch { busy = true; error = null
                         try { val result = repository.scan(actual.site.id, credential); require(result.parcelId != null) { t("This code is not a supported pickup. Use Returns for a return ID and PIN.", "Ce code ne correspond pas à un retrait pris en charge. Utilisez Retours avec l'identifiant et le PIN.") }
                             require(result.blockingReason == null) { result.blockingReason.orEmpty() }; selected = repository.parcel(actual.site.id, result.parcelId); qr = !credential.matches(Regex("[0-9]{6}")); identity = false; notice = t("Assessed storage fee", "Frais de garde évalués") + ": ${result.feeDueCfa} CFA"
@@ -188,15 +215,15 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                 }
                 1 -> {
                     Text(t("Customer return intake", "Réception de retour client"), style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(returnId, { returnId = it.take(128) }, label = { Text(t("Return ID", "Identifiant du retour")) }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(returnPin, { returnPin = it.filter(Char::isDigit).take(6) }, label = { Text(t("Server return PIN", "PIN de retour du serveur")) }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(note, { note = it.take(1000) }, label = { Text(t("Visible package condition (optional)", "État visible du colis (facultatif)")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(returnId, { returnId = it.take(128) }, label = { Text(t("Return ID", "Identifiant du retour")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(returnPin, { returnPin = it.filter(Char::isDigit).take(6) }, label = { Text(t("Server return PIN", "PIN de retour du serveur")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(note, { note = it.take(1000) }, label = { Text(t("Visible package condition (optional)", "État visible du colis (facultatif)")) }, modifier = Modifier.fillMaxWidth())
                     Button(enabled = !busy && pending == null && returnId.isNotBlank() && returnPin.length == 6, onClick = { confirmation = repository.returnIntent(actual.site.id, returnId.trim(), returnPin, note) }) { Text(t("Confirm physical intake", "Confirmer la réception physique")) }
                     Text(t("Eligibility, route and PIN validation are owned by the server. Intake does not approve or execute a refund.", "Le serveur vérifie l'éligibilité, le relais et le PIN. La réception n'autorise ni n'exécute un remboursement."))
                     if(actual.returns.isEmpty()) Text(t("No received return records at this relay.", "Aucun retour reçu dans ce relais."))
                     actual.returns.forEach { returned ->
-                        OutlinedCard(Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SequoPanel(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(SequoDesign.CardPadding), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(returned.id, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(hubStatus(returned.status, settings.language))
                                 HubRecordHistory(hubHistoryRows(emptyList(), listOf(returned)), settings.language)
@@ -209,7 +236,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     val events = hubHistoryRows(actual.parcels, actual.returns)
                     if (events.isEmpty()) Text(t("No history yet.", "Aucun historique.")) else events.forEach { HubHistoryCard(it, settings.language) }
                     Button(enabled = !busy, onClick = { scope.launch { busy = true; inbox = null; error = null; try { inbox = repository.inbox() } catch(e: Exception) { if(e is CancellationException) throw e; error = hubFailure(e, settings.language) } finally { busy = false } } }) { Text(t("Read my notification inbox", "Lire mes notifications")) }
-                    inbox?.let { messages -> if(messages.isEmpty()) Text(t("Your inbox is empty.", "Votre boîte est vide.")); messages.forEach { message -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text(message.title); Text(message.body); Text(hubHistoryTimestamp(message.createdAt), style = MaterialTheme.typography.labelSmall)
+                    inbox?.let { messages -> if(messages.isEmpty()) Text(t("Your inbox is empty.", "Votre boîte est vide.")); messages.forEach { message -> SequoPanel(Modifier.fillMaxWidth()) { Column(Modifier.padding(SequoDesign.CardPadding)) { Text(message.title); Text(message.body); Text(hubHistoryTimestamp(message.createdAt), style = MaterialTheme.typography.labelSmall)
                         Row { listOf(if(message.readAt == null) "read" else null, if(message.archivedAt == null) "archive" else "unarchive").filterNotNull().forEach { action -> TextButton(enabled = !busy, onClick = { scope.launch { busy = true; inbox = null; try { repository.notification(message.id, action); inbox = repository.inbox() } catch(e: Exception) { if(e is CancellationException) throw e; error = hubFailure(e, settings.language) } finally { busy = false } } }) { Text(hubStatus(action, settings.language)) } } }
                     } } } }
                 }
@@ -247,22 +274,22 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     Text(t("Opening hours", "Horaires"), style = MaterialTheme.typography.titleMedium)
                     val current = hours
                     if(current != null) {
-                        OutlinedTextField(current.timezone.orEmpty(), { hours = current.copy(timezone = it.take(128)) }, label = { Text(t("Time zone (e.g. Africa/Lome)", "Fuseau horaire (ex. Africa/Lome)")) }, modifier = Modifier.fillMaxWidth())
+                        HubTextField(current.timezone.orEmpty(), { hours = current.copy(timezone = it.take(128)) }, label = { Text(t("Time zone (e.g. Africa/Lome)", "Fuseau horaire (ex. Africa/Lome)")) }, modifier = Modifier.fillMaxWidth())
                         if(current.weeklyHours.isEmpty()) Text(t("Not configured: choose hours explicitly. No default opening schedule is assumed.", "Non configuré : choisissez les horaires. Aucun horaire d'ouverture n'est supposé."))
                         val days = listOf("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")
                         days.forEach { day -> val value = current.weeklyHours.firstOrNull { it.dayOfWeek == day } ?: WeeklyOpeningHourResponse(day, false)
                             fun edit(next: WeeklyOpeningHourResponse) { hours = current.copy(weeklyHours = (current.weeklyHours.filterNot { it.dayOfWeek == day } + next).sortedBy { days.indexOf(it.dayOfWeek) }) }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(hubStatus(day, settings.language)); Switch(value.isOpen, { open -> edit(value.copy(isOpen = open, opensAt = value.opensAt.takeIf { open }, closesAt = value.closesAt.takeIf { open })) }, enabled = !busy) }
-                            if(value.isOpen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value.opensAt.orEmpty(), { edit(value.copy(opensAt = it.take(8))) }, Modifier.weight(1f), label = { Text(t("Opens HH:mm", "Ouverture HH:mm")) }); OutlinedTextField(value.closesAt.orEmpty(), { edit(value.copy(closesAt = it.take(8))) }, Modifier.weight(1f), label = { Text(t("Closes HH:mm", "Fermeture HH:mm")) }) }
+                            if(value.isOpen) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { HubTextField(value.opensAt.orEmpty(), { edit(value.copy(opensAt = it.take(8))) }, Modifier.weight(1f), label = { Text(t("Opens HH:mm", "Ouverture HH:mm")) }); HubTextField(value.closesAt.orEmpty(), { edit(value.copy(closesAt = it.take(8))) }, Modifier.weight(1f), label = { Text(t("Closes HH:mm", "Fermeture HH:mm")) }) }
                         }
                         Text(t("Dated opening exception", "Exception d’ouverture datée"), style = MaterialTheme.typography.titleSmall)
-                        OutlinedTextField(exceptionDate, { exceptionDate = it.take(10) }, label = { Text(t("Date YYYY-MM-DD", "Date AAAA-MM-JJ")) }, modifier = Modifier.fillMaxWidth())
+                        HubTextField(exceptionDate, { exceptionDate = it.take(10) }, label = { Text(t("Date YYYY-MM-DD", "Date AAAA-MM-JJ")) }, modifier = Modifier.fillMaxWidth())
                         Row { Checkbox(exceptionClosed, { exceptionClosed = it }); Text(t("Closed on this date", "Fermé à cette date")) }
                         if(!exceptionClosed) {
-                            OutlinedTextField(exceptionOpens, { exceptionOpens = it.take(8) }, label = { Text(t("Opens HH:mm", "Ouverture HH:mm")) }, modifier = Modifier.fillMaxWidth())
-                            OutlinedTextField(exceptionCloses, { exceptionCloses = it.take(8) }, label = { Text(t("Closes HH:mm", "Fermeture HH:mm")) }, modifier = Modifier.fillMaxWidth())
+                            HubTextField(exceptionOpens, { exceptionOpens = it.take(8) }, label = { Text(t("Opens HH:mm", "Ouverture HH:mm")) }, modifier = Modifier.fillMaxWidth())
+                            HubTextField(exceptionCloses, { exceptionCloses = it.take(8) }, label = { Text(t("Closes HH:mm", "Fermeture HH:mm")) }, modifier = Modifier.fillMaxWidth())
                         }
-                        OutlinedTextField(exceptionReason, { exceptionReason = it.take(255) }, label = { Text(t("Exception reason", "Motif de l’exception")) }, modifier = Modifier.fillMaxWidth())
+                        HubTextField(exceptionReason, { exceptionReason = it.take(255) }, label = { Text(t("Exception reason", "Motif de l’exception")) }, modifier = Modifier.fillMaxWidth())
                         TextButton(enabled = !busy && exceptionDate.matches(Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")), onClick = {
                             val entry = OpeningHourExceptionResponse(exceptionDate, exceptionClosed, if(exceptionClosed) null else exceptionOpens, if(exceptionClosed) null else exceptionCloses, exceptionReason.takeIf { it.isNotBlank() })
                             hours = current.copy(exceptions = (current.exceptions.filterNot { it.date == entry.date } + entry).sortedBy { it.date })
@@ -281,27 +308,30 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     Text(t("For batch collection, push setup or refund decisions, contact SEQUO operations.", "Pour les lots de collecte, les notifications push et les décisions de remboursement, contactez les opérations SEQUO."))
                     Text(t("Account deletion request", "Demande de suppression du compte"), style = MaterialTheme.typography.titleMedium)
                     Text(t("SEQUO reviews the request. Submission does not immediately erase your account or operational records.", "SEQUO examine la demande. Son envoi n’efface pas immédiatement votre compte ni les enregistrements opérationnels."))
-                    OutlinedTextField(deletionReason, { deletionReason = it.take(500) }, label = { Text(t("Reason (optional)", "Motif (facultatif)")) }, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(deletionConfirmation, { deletionConfirmation = it.take(32) }, label = { Text("DELETE_MY_ACCOUNT") }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(deletionReason, { deletionReason = it.take(500) }, label = { Text(t("Reason (optional)", "Motif (facultatif)")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(deletionConfirmation, { deletionConfirmation = it.take(32) }, label = { Text("DELETE_MY_ACCOUNT") }, modifier = Modifier.fillMaxWidth())
                     OutlinedButton(enabled = !busy && pending == null && deletionConfirmation == "DELETE_MY_ACCOUNT", onClick = { confirmation = repository.deletionIntent(deletionConfirmation, deletionReason) }) { Text(t("Request account deletion", "Demander la suppression du compte")) }
                     TextButton(onClick = { legal = true }) { Text(t("Privacy and terms", "Confidentialité et conditions")) }
                     TextButton(enabled = !busy, onClick = { snapshot = null; inbox = null; pending = null; clearCredential(); onLogout() }) { Text(t("Sign out", "Se déconnecter")) }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            listOf(t("Hub", "Relais"), t("Returns", "Retours"), t("History", "Historique"), t("Settings", "Réglages")).forEachIndexed { index, label -> TextButton(onClick = { if(!busy) { tab = index; selected = null; clearCredential() } }) { Text(label) } }
-        }
+        SequoNavigationBar(
+            destinations = destinations,
+            selectedKey = tab.toString(),
+            onSelect = { key -> if(!busy) { tab = key.toInt(); selected = null; clearCredential() } },
+            enabled = !busy,
+        )
     }
     selected?.let { parcel -> AlertDialog(onDismissRequest = { if(!busy) { selected = null; clearCredential() } }, title = { Text(t("Parcel detail", "Détail du colis")) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(t("Deposited", "Déposé") + ": " + hubHistoryTimestamp(it)) }
             parcel.custody?.let { Text(t("Fee eligibility", "Éligibilité aux frais") + ": ${it.storageFeeEligible}"); Text(t("Review due", "Revue requise") + ": ${it.reviewDueAt}") }
             HubRecordHistory(hubHistoryRows(listOf(parcel), emptyList()), settings.language)
-            OutlinedTextField(raw, { raw = it.take(256); identity = false }, label = { Text(t("Customer PIN or QR nonce", "PIN client ou contenu QR")) })
+            HubTextField(raw, { raw = it.take(256); identity = false }, label = { Text(t("Customer PIN or QR nonce", "PIN client ou contenu QR")) })
             Row { Checkbox(qr, { qr = it; identity = false }); Text(t("QR value", "Valeur QR")) }
             Row { Checkbox(identity, { identity = it }); Text(t("Customer identity checked against presented document", "Identité du client vérifiée sur le document présenté")) }
-            OutlinedTextField(note, { note = it.take(1000) }, label = { Text(t("Problem note", "Note du problème")) })
+            HubTextField(note, { note = it.take(1000) }, label = { Text(t("Problem note", "Note du problème")) })
             TextButton(enabled = !busy && pending == null && note.isNotBlank(), onClick = { confirmation = repository.problemIntent(parcel.id, note) }) { Text(t("Report problem", "Signaler un problème")) }
             Text(t("Confirm identity without taking a photograph.", "Vérifiez l'identité sans la photographier."), style = MaterialTheme.typography.bodySmall)
         }
@@ -320,4 +350,17 @@ private fun hubFailure(error: Throwable, language: AppLanguage): String {
         else -> if(french) "Service indisponible. Aucune réussite locale n'est supposée." else "Service unavailable. No local success is assumed."
     }
     return if(french) "Impossible de confirmer l'état du serveur. Vérifiez la connexion et réessayez." else "Server state could not be confirmed. Check the connection and retry."
+}
+
+
+@Composable
+private fun HubTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: (@Composable () -> Unit)? = null,
+) {
+    OutlinedTextField(value = value, onValueChange = onValueChange,
+        modifier = modifier.heightIn(min = SequoDesign.ControlHeight), label = label,
+        shape = MaterialTheme.shapes.extraSmall)
 }

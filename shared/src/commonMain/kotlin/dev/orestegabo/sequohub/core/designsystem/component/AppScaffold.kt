@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.orestegabo.sequo.design.SequoDesign
 
 @Composable
 fun AppScroll(
@@ -25,7 +26,7 @@ fun AppScroll(
             .safeContentPadding()
             .verticalScroll(rememberScrollState())
             .padding(start = 0.dp, top = 18.dp, end = 0.dp, bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap),
         content = content,
     )
 }

@@ -33,7 +33,10 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.Button
+import dev.orestegabo.sequo.design.SequoActionButton as Button
+import dev.orestegabo.sequo.design.SequoOutlineButton
+import dev.orestegabo.sequo.design.SequoDesign
+import dev.orestegabo.sequo.design.SequoPanel
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -102,18 +105,8 @@ fun AuthScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        colorScheme.primaryContainer.copy(alpha = 0.86f),
-                        colorScheme.background,
-                        colorScheme.surfaceContainerLow,
-                    ),
-                ),
-            ),
+            .background(colorScheme.background),
     ) {
-        AuthBackgroundIcons()
-
         if (showEmailFallback && emailSignInAvailable) {
             EmailFallbackPage(
                 language = language,
@@ -160,9 +153,9 @@ private fun SocialAuthPage(
             .fillMaxSize()
             .safeContentPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = SequoDesign.ScreenGutter)
             .padding(top = 22.dp, bottom = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
+        verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap),
     ) {
         BrandMark(
             language = language,
@@ -171,8 +164,8 @@ private fun SocialAuthPage(
 
         Column(verticalArrangement = Arrangement.Bottom) {
             OnboardingPager(language)
-            Spacer(modifier = Modifier.size(24.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Spacer(modifier = Modifier.size(SequoDesign.SectionGap))
+            Column(verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap)) {
                 GoogleButton(
                     loading = googleSignInInProgress,
                     onClick = onGoogleLogin,
@@ -221,7 +214,7 @@ private fun OnboardingPager(language: AppLanguage) {
     val pagerState = rememberPagerState(pageCount = { slides.size })
     val colorScheme = MaterialTheme.colorScheme
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap)) {
         HorizontalPager(
             state = pagerState,
             pageSpacing = 14.dp,
@@ -253,35 +246,37 @@ private fun OnboardingPager(language: AppLanguage) {
 @Composable
 private fun OnboardingCard(slide: OnboardingSlide) {
     val colorScheme = MaterialTheme.colorScheme
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 270.dp)
-            .padding(horizontal = 2.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Image(
-            painter = painterResource(slide.illustration),
-            contentDescription = null,
+    SequoPanel {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(166.dp),
-            contentScale = ContentScale.Fit,
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                text = slide.title,
-                color = colorScheme.onBackground,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                .heightIn(min = 270.dp)
+                .padding(SequoDesign.CardPadding),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Image(
+                painter = painterResource(slide.illustration),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(166.dp),
+                contentScale = ContentScale.Fit,
             )
-            Text(
-                text = slide.subtitle,
-                color = colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = slide.title,
+                    color = colorScheme.onBackground,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = slide.subtitle,
+                    color = colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -344,7 +339,7 @@ private fun EmailFallbackPage(
             .safeContentPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = SequoDesign.ScreenGutter)
             .padding(top = 20.dp, bottom = 22.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -414,7 +409,7 @@ private fun EmailFallbackPage(
 
             Spacer(modifier = Modifier.size(20.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap)) {
                 if (authStep == AuthStep.Email) {
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
@@ -440,7 +435,7 @@ private fun EmailFallbackPage(
                         supportingText = {
                             Text(emailError ?: providerHint)
                         },
-                        shape = SequoHubShapes.Small,
+                        shape = MaterialTheme.shapes.extraSmall,
                         colors = emailFieldColors(),
                     )
 
@@ -478,7 +473,6 @@ private fun EmailFallbackPage(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        shape = SequoHubShapes.Small,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colorScheme.primary,
                             contentColor = colorScheme.onPrimary,
@@ -592,7 +586,7 @@ private fun EmailCredentialsForm(
             supportingText = {
                 Text(birthDateError ?: "Use your legal birth date.")
             },
-            shape = SequoHubShapes.Small,
+            shape = MaterialTheme.shapes.extraSmall,
             colors = emailFieldColors(),
         )
     }
@@ -621,7 +615,7 @@ private fun EmailCredentialsForm(
         } else {
             null
         },
-        shape = SequoHubShapes.Small,
+        shape = MaterialTheme.shapes.extraSmall,
         colors = emailFieldColors(),
     )
 
@@ -648,7 +642,7 @@ private fun EmailCredentialsForm(
             supportingText = {
                 Text(confirmPasswordError ?: "Repeat the same password.")
             },
-            shape = SequoHubShapes.Small,
+            shape = MaterialTheme.shapes.extraSmall,
             colors = emailFieldColors(),
         )
     } else {
@@ -777,8 +771,7 @@ private fun AuthProviderActionButton(
         enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
-        shape = SequoHubShapes.Small,
+            .height(SequoDesign.ControlHeight),
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor,
@@ -1171,8 +1164,7 @@ private fun AppleButton(onClick: () -> Unit, language: AppLanguage = AppLanguage
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp),
-        shape = SequoHubShapes.Small,
+            .height(SequoDesign.ControlHeight),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFF090A0C),
             contentColor = Color.White,
@@ -1202,18 +1194,12 @@ private fun GoogleButton(
     language: AppLanguage = AppLanguage.English,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    OutlinedButton(
+    SequoOutlineButton(
         onClick = onClick,
         enabled = !loading,
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp),
-        shape = SequoHubShapes.Small,
-        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.72f)),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = colorScheme.surface.copy(alpha = 0.9f),
-            contentColor = colorScheme.onSurface,
-        ),
+            .height(SequoDesign.ControlHeight),
     ) {
         if (loading) {
             CircularProgressIndicator(

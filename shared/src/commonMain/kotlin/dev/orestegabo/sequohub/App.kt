@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
@@ -274,7 +275,8 @@ private fun DemoHubApp(
             contentColor = MaterialTheme.colorScheme.onPrimary,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 22.dp, bottom = 104.dp),
+                .navigationBarsPadding()
+                .padding(end = 20.dp, bottom = 112.dp),
         ) {
             Icon(
                 imageVector = Icons.Filled.QrCodeScanner,
@@ -288,7 +290,7 @@ private fun DemoHubApp(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .navigationBarsPadding(),
         )
 
         selectedLocker?.let { locker ->

@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.orestegabo.sequo.design.SequoDesign
+import dev.orestegabo.sequo.design.SequoPanel
 import dev.orestegabo.sequohub.core.designsystem.theme.CounterNumberTextStyle
 import dev.orestegabo.sequohub.core.designsystem.theme.sequoSemanticColors
 
@@ -30,16 +32,10 @@ fun MinimalCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = colorScheme.surface,
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-    ) {
+    SequoPanel(modifier = modifier.padding(horizontal = SequoDesign.ScreenGutter)) {
         Column(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(SequoDesign.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(SequoDesign.SectionGap),
             content = content,
         )
     }
@@ -53,22 +49,16 @@ fun MetricCard(
     note: String,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier.heightIn(min = 92.dp),
-        shape = SequoHubShapes.Card,
-        color = colorScheme.surfaceContainerLow,
-        border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.72f)),
-        tonalElevation = 1.dp,
-    ) {
+    SequoPanel(modifier = modifier.heightIn(min = 92.dp)) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(SequoDesign.CardPadding),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             Text(
                 text = label,
                 color = colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(

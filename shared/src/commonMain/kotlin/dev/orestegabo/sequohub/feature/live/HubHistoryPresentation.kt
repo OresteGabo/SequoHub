@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.orestegabo.sequo.design.SequoDesign
+import dev.orestegabo.sequo.design.SequoPanel
 import dev.orestegabo.sequohub.core.hub.LiveHubParcel
 import dev.orestegabo.sequohub.core.hub.LiveHubReturn
 import dev.orestegabo.sequohub.feature.settings.AppLanguage
@@ -33,8 +35,8 @@ internal fun hubHistoryTimestamp(raw: String): String = runCatching {
 internal fun HubHistoryCard(entry: HubHistoryEntry, language: AppLanguage) {
     val french = language == AppLanguage.French
     var expanded by remember(entry) { mutableStateOf(false) }
-    OutlinedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    SequoPanel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(SequoDesign.CardPadding), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(hubStatus(entry.action, language), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(hubHistoryTimestamp(entry.createdAt), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
