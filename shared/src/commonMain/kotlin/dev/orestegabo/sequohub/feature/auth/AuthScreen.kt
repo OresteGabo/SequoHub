@@ -43,6 +43,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import dev.orestegabo.sequohub.feature.live.HubBackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +94,7 @@ fun AuthScreen(
 ) {
     var showEmailFallback by rememberSaveable { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
+    HubBackHandler(showEmailFallback) { showEmailFallback = false }
 
     Box(
         modifier = modifier

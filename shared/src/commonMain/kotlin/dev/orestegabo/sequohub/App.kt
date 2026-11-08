@@ -45,6 +45,8 @@ import dev.orestegabo.sequohub.core.hub.HubRepository
 import dev.orestegabo.sequohub.core.hub.HubScanUiResult
 import dev.orestegabo.sequohub.core.localization.LocalSequoStrings
 import dev.orestegabo.sequohub.core.localization.stringsFor
+import dev.orestegabo.sequohub.feature.live.HubSessionGate
+import dev.orestegabo.sequohub.feature.live.HubBackHandler
 import dev.orestegabo.sequohub.feature.activity.ActivityScreen
 import dev.orestegabo.sequohub.feature.auth.AuthScreen
 import dev.orestegabo.sequohub.feature.hub.HubDashboard
@@ -75,6 +77,7 @@ fun App(
     },
 ) {
     var settings by remember { mutableStateOf(SettingsUiState()) }
+    var demo by remember { mutableStateOf(false) }
     val systemDark = isSystemInDarkTheme()
     val useDarkTheme = when (settings.themeMode) {
         ThemeMode.System -> systemDark
@@ -84,23 +87,21 @@ fun App(
 
     SequoHubTheme(darkTheme = useDarkTheme) {
         CompositionLocalProvider(LocalSequoStrings provides stringsFor(settings.language)) {
-            SequoHubApp(
-                settings = settings,
-                onSettingsChange = { settings = it },
-                onGoogleSignIn = onGoogleSignIn,
-            )
+            if (demo) {
+                HubBackHandler(true) { demo = false }
+                DemoHubApp(settings, { settings = it }, { demo = false })
+            } else HubSessionGate(settings, { settings = it }, onGoogleSignIn, { demo = true })
         }
     }
 }
 
 @Composable
-private fun SequoHubApp(
+private fun DemoHubApp(
     settings: SettingsUiState,
     onSettingsChange: (SettingsUiState) -> Unit,
-    onGoogleSignIn: suspend () -> GoogleSignInResult,
+    onExit: () -> Unit,
 ) {
     var showSplash by rememberSaveable { mutableStateOf(true) }
-    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
     var showLegalScreen by rememberSaveable { mutableStateOf(false) }
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.Hub) }
     var selectedLockerId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -115,13 +116,6 @@ private fun SequoHubApp(
     var lastReturnCredential by remember { mutableStateOf<String?>(null) }
     var collectionManifest by remember { mutableStateOf<HubCollectionManifestUi?>(null) }
     var lastCollectionManifestCode by remember { mutableStateOf<String?>(null) }
-    val authSessionStore = rememberAuthSessionStore()
-    val authRepository = remember(authSessionStore) {
-        AuthRepository(
-            authApiClient = AuthApiClient(),
-            sessionStore = authSessionStore,
-        )
-    }
     val apiHealthClient = remember { ApiHealthClient() }
     val hubRepository: HubRepository = remember { FakeHubRepository() }
     val scope = rememberCoroutineScope()
@@ -130,95 +124,19 @@ private fun SequoHubApp(
     val hubBlockedBySequo = hubState?.control?.hubBlockedBySequo ?: false
     val selectedLocker = lockers.fastFirstOrNull { it.id == selectedLockerId }
 
-    DisposableEffect(authRepository, apiHealthClient, hubRepository) {
+    DisposableEffect(apiHealthClient, hubRepository) {
         onDispose {
-            authRepository.close()
             apiHealthClient.close()
             hubRepository.close()
         }
     }
 
-    LaunchedEffect(authRepository) {
-        isAuthenticated = authRepository.getSavedSession() != null
-    }
-
-    LaunchedEffect(isAuthenticated, strings, hubRepository) {
-        if (isAuthenticated) {
-            hubState = runCatching { hubRepository.loadHubState(DemoHubId, strings) }.getOrNull()
-        }
+    LaunchedEffect(strings, hubRepository) {
+        hubState = hubRepository.loadHubState(DemoHubId, strings)
     }
 
     if (showSplash) {
         SplashScreen(onTimeout = { showSplash = false })
-        return
-    }
-
-    if (!isAuthenticated) {
-        if (showLegalScreen) {
-            LegalScreen(onBack = { showLegalScreen = false })
-        } else {
-            AuthScreen(
-                language = settings.language,
-                onLanguageChange = { onSettingsChange(settings.copy(language = it)) },
-                onLogin = { isAuthenticated = true },
-                googleSignInInProgress = googleSignInInProgress,
-                onGoogleLogin = {
-                    if (googleSignInInProgress) return@AuthScreen
-                    scope.launch {
-                        googleSignInInProgress = true
-                        authErrorMessage = null
-                        try {
-                            val result = runCatching {
-                                onGoogleSignIn()
-                            }.getOrElse { error ->
-                                if (error is CancellationException) throw error
-                                println("Google sign-in failed before backend login: ${error.message}")
-                                GoogleSignInResult.Failure(error.message ?: "Google sign-in failed.")
-                            }
-
-                            when (result) {
-                                is GoogleSignInResult.Success -> {
-                                    println("Google sign-in succeeded locally; sending token to backend.")
-                                    runCatching {
-                                        authRepository.loginWithGoogle(result.idToken)
-                                    }.onSuccess {
-                                        authErrorMessage = null
-                                        isAuthenticated = true
-                                    }.onFailure { error ->
-                                        if (error is CancellationException) throw error
-                                        println("Google backend login failed: ${error.message}")
-                                        authErrorMessage = error.message ?: "Backend Google login failed."
-                                    }
-                                }
-                                GoogleSignInResult.Cancelled -> {
-                                    println("Google sign-in cancelled by the user or provider.")
-                                }
-                                is GoogleSignInResult.Failure -> {
-                                    println("Google sign-in failed: ${result.message}")
-                                    authErrorMessage = result.message
-                                }
-                            }
-                        } finally {
-                            googleSignInInProgress = false
-                        }
-                    }
-                },
-                onAppleLogin = { isAuthenticated = true },
-                onPrivacyTermsClick = { showLegalScreen = true },
-            )
-        }
-        authErrorMessage?.let { message ->
-            AlertDialog(
-                onDismissRequest = { authErrorMessage = null },
-                title = { Text("Google sign-in") },
-                text = { Text(message) },
-                confirmButton = {
-                    TextButton(onClick = { authErrorMessage = null }) {
-                        Text("OK")
-                    }
-                },
-            )
-        }
         return
     }
 
@@ -227,6 +145,7 @@ private fun SequoHubApp(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
+        Text("DEMO · Sample data only · No server custody changes", modifier = Modifier.align(Alignment.TopCenter).padding(8.dp), style = MaterialTheme.typography.labelSmall)
         when (activeWorkflow) {
             HubWorkflowScreen.Scan -> ScanReceiveScreen(
                 scanResult = scanResolution,
@@ -337,10 +256,9 @@ private fun SequoHubApp(
                 },
                 onLogout = {
                     scope.launch {
-                        authRepository.logout()
                         selectedTab = MainTab.Hub
                         selectedLockerId = null
-                        isAuthenticated = false
+                        onExit()
                     }
                 },
                 onDeleteAccount = {},
