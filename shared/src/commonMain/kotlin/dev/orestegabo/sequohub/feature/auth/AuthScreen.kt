@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -91,10 +92,12 @@ fun AuthScreen(
     onAppleLogin: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
     modifier: Modifier = Modifier,
+    appleSignInAvailable: Boolean = false,
+    emailSignInAvailable: Boolean = false,
 ) {
     var showEmailFallback by rememberSaveable { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
-    HubBackHandler(showEmailFallback) { showEmailFallback = false }
+    HubBackHandler(showEmailFallback && emailSignInAvailable) { showEmailFallback = false }
 
     Box(
         modifier = modifier
@@ -111,7 +114,7 @@ fun AuthScreen(
     ) {
         AuthBackgroundIcons()
 
-        if (showEmailFallback) {
+        if (showEmailFallback && emailSignInAvailable) {
             EmailFallbackPage(
                 language = language,
                 onLanguageChange = onLanguageChange,
@@ -131,6 +134,8 @@ fun AuthScreen(
                 onGoogleLogin = onGoogleLogin,
                 onEmailFallback = { showEmailFallback = true },
                 onPrivacyTermsClick = onPrivacyTermsClick,
+                appleSignInAvailable = appleSignInAvailable,
+                emailSignInAvailable = emailSignInAvailable,
             )
         }
     }
@@ -145,6 +150,8 @@ private fun SocialAuthPage(
     onGoogleLogin: () -> Unit,
     onEmailFallback: () -> Unit,
     onPrivacyTermsClick: () -> Unit,
+    appleSignInAvailable: Boolean,
+    emailSignInAvailable: Boolean,
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
@@ -152,9 +159,10 @@ private fun SocialAuthPage(
         modifier = Modifier
             .fillMaxSize()
             .safeContentPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
             .padding(top = 22.dp, bottom = 22.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
         BrandMark(
             language = language,
@@ -162,17 +170,18 @@ private fun SocialAuthPage(
         )
 
         Column(verticalArrangement = Arrangement.Bottom) {
-            OnboardingPager()
+            OnboardingPager(language)
             Spacer(modifier = Modifier.size(24.dp))
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                AppleButton(onClick = onAppleLogin)
                 GoogleButton(
                     loading = googleSignInInProgress,
                     onClick = onGoogleLogin,
+                    language = language,
                 )
+                if (appleSignInAvailable) AppleButton(onClick = onAppleLogin, language = language)
 
-                Text(
-                    text = "Use email instead",
+                if (emailSignInAvailable) Text(
+                    text = hubAuthText(language).email,
                     color = colorScheme.primary,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
@@ -183,28 +192,29 @@ private fun SocialAuthPage(
                         .padding(top = 2.dp, bottom = 6.dp),
                 )
 
-                TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
+                TermsLine(onPrivacyTermsClick = onPrivacyTermsClick, language = language)
             }
         }
     }
 }
 
 @Composable
-private fun OnboardingPager() {
+private fun OnboardingPager(language: AppLanguage) {
+    val text = hubAuthText(language)
     val slides = listOf(
         OnboardingSlide(
-            title = "Scan every package",
-            subtitle = "New seller drop-offs, courier arrivals, customer pickups, and returns all start from one QR scan.",
+            title = text.findTitle,
+            subtitle = text.findDetail,
             illustration = Res.drawable.onboarding_scan_arrivals,
         ),
         OnboardingSlide(
-            title = "Know the next action",
-            subtitle = "See the right flow immediately: store a package, collect fees, open a locker, or receive a return.",
+            title = text.handoffTitle,
+            subtitle = text.handoffDetail,
             illustration = Res.drawable.onboarding_pickup_flow,
         ),
         OnboardingSlide(
-            title = "Keep the hub traceable",
-            subtitle = "Follow locker status, sync state, pickups, and returns in one simple history.",
+            title = text.historyTitle,
+            subtitle = text.historyDetail,
             illustration = Res.drawable.onboarding_history,
         ),
     )
@@ -246,7 +256,7 @@ private fun OnboardingCard(slide: OnboardingSlide) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(270.dp)
+            .heightIn(min = 270.dp)
             .padding(horizontal = 2.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -508,7 +518,7 @@ private fun EmailFallbackPage(
                         .padding(vertical = 4.dp),
                 )
 
-                TermsLine(onPrivacyTermsClick = onPrivacyTermsClick)
+                TermsLine(onPrivacyTermsClick = onPrivacyTermsClick, language = language)
             }
         }
     }
@@ -839,7 +849,7 @@ private fun EmailHeader(
                         .height(30.dp),
                 )
                 Text(
-                    text = "Relay counter",
+                    text = hubAuthText(language).counter,
                     color = colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelMedium,
                 )
@@ -958,6 +968,7 @@ private fun BrandMark(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -967,6 +978,7 @@ private fun BrandMark(
                     .height(56.dp),
             )
             Column(
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 SequoHubWordmark(
@@ -975,7 +987,7 @@ private fun BrandMark(
                         .height(32.dp),
                 )
                 Text(
-                    text = "Relay counter",
+                    text = hubAuthText(language).counter,
                     color = colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelMedium,
                 )
@@ -1154,7 +1166,7 @@ private enum class LanguageFlag {
 }
 
 @Composable
-private fun AppleButton(onClick: () -> Unit) {
+private fun AppleButton(onClick: () -> Unit, language: AppLanguage = AppLanguage.English) {
     Button(
         onClick = onClick,
         modifier = Modifier
@@ -1174,7 +1186,7 @@ private fun AppleButton(onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = "Continue with Apple",
+            text = hubAuthText(language).apple,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -1187,6 +1199,7 @@ private fun AppleButton(onClick: () -> Unit) {
 private fun GoogleButton(
     loading: Boolean,
     onClick: () -> Unit,
+    language: AppLanguage = AppLanguage.English,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     OutlinedButton(
@@ -1218,7 +1231,7 @@ private fun GoogleButton(
         }
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            text = if (loading) "Signing in..." else "Continue with Google",
+            text = if (loading) hubAuthText(language).signingIn else hubAuthText(language).google,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -1228,20 +1241,20 @@ private fun GoogleButton(
 }
 
 @Composable
-private fun TermsLine(onPrivacyTermsClick: () -> Unit) {
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+private fun TermsLine(onPrivacyTermsClick: () -> Unit, language: AppLanguage = AppLanguage.English) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = "By continuing you accept ",
+            text = hubAuthText(language).termsIntro,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
         )
         Text(
-            text = "Privacy & Terms",
+            text = hubAuthText(language).termsLink,
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,

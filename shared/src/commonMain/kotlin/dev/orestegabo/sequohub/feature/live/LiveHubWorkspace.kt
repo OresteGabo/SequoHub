@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.orestegabo.sequohub.core.auth.*
 import dev.orestegabo.sequohub.core.hub.*
@@ -56,7 +57,7 @@ fun HubSessionGate(settings: SettingsUiState, onSettingsChange: (SettingsUiState
                     } } catch(e: Exception) { if(e is CancellationException) throw e; error = hubFailure(e, settings.language) }
                     finally { busy = false }
                 }
-            }, onAppleLogin = { error = t("Apple sign-in is not connected in this app.", "La connexion Apple n'est pas connectée dans cette app.") }, onPrivacyTermsClick = { legal = true }) }
+            }, onAppleLogin = { error = t("Apple sign-in is not connected in this app.", "La connexion Apple n'est pas connectée dans cette app.") }, onPrivacyTermsClick = { legal = true }, appleSignInAvailable = false, emailSignInAvailable = false) }
         Surface(tonalElevation = 2.dp) { Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
             if (NetworkConfig.IsLocalFixture && fixture.enabled && fixture.mode == "LOCAL_FIXTURE") {
                 Text("LOCAL FIXTURE · ${NetworkConfig.ReleaseId}", style = MaterialTheme.typography.labelSmall)
@@ -160,7 +161,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                 TextButton(enabled = !busy, onClick = { runWrite(intent) }) { Text(t("Retry same action", "Réessayer la même action")) }
                 TextButton(enabled = !busy, onClick = { pending = null; refresh() }) { Text(t("Refresh and review", "Actualiser et vérifier")) }
             } } }
-            if (!busy && sites.isEmpty()) Text(t("No relay is assigned to this account. Ask SEQUO to review the account and site membership.", "Aucun relais n'est affecté à ce compte. Demandez à SEQUO de vérifier son affectation."))
+            if (!busy && error == null && sites.isEmpty()) Text(t("No relay is assigned to this account. Ask SEQUO to review the account and site membership.", "Aucun relais n'est affecté à ce compte. Demandez à SEQUO de vérifier son affectation."))
             if (sites.size > 1) Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { sites.forEach { candidate -> OutlinedButton(modifier = Modifier.fillMaxWidth(), enabled = !busy && pending == null, onClick = { site = candidate; refresh(candidate) }) { Text(candidate.name) } } }
             val actual = snapshot
             if (actual != null) when(tab) {
@@ -173,7 +174,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     Text(t("Parcels", "Colis"), style = MaterialTheme.typography.titleMedium)
                     if(actual.parcels.isEmpty()) Text(t("No parcel records at this relay.", "Aucun colis enregistré dans ce relais."))
                     actual.parcels.forEach { parcel -> OutlinedCard(onClick = { selected = parcel; clearCredential(); note = "" }, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(14.dp)) { Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        Column(Modifier.padding(14.dp)) { Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(hubHistoryTimestamp(it), style = MaterialTheme.typography.bodySmall) }
                             if(parcel.custody?.reviewDue == true) Text(t("Operator review due", "Revue opérateur requise"), color = MaterialTheme.colorScheme.error)
                         }
                     } }
@@ -193,14 +194,22 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     Button(enabled = !busy && pending == null && returnId.isNotBlank() && returnPin.length == 6, onClick = { confirmation = repository.returnIntent(actual.site.id, returnId.trim(), returnPin, note) }) { Text(t("Confirm physical intake", "Confirmer la réception physique")) }
                     Text(t("Eligibility, route and PIN validation are owned by the server. Intake does not approve or execute a refund.", "Le serveur vérifie l'éligibilité, le relais et le PIN. La réception n'autorise ni n'exécute un remboursement."))
                     if(actual.returns.isEmpty()) Text(t("No received return records at this relay.", "Aucun retour reçu dans ce relais."))
-                    actual.returns.forEach { returned -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp)) { Text(returned.id); Text(hubStatus(returned.status, settings.language)); returned.history.forEach { Text("${it.createdAt} · ${it.action}", style = MaterialTheme.typography.bodySmall) } } } }
+                    actual.returns.forEach { returned ->
+                        OutlinedCard(Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(returned.id, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(hubStatus(returned.status, settings.language))
+                                HubRecordHistory(hubHistoryRows(emptyList(), listOf(returned)), settings.language)
+                            }
+                        }
+                    }
                 }
                 2 -> {
                     Text(t("Persisted custody history", "Historique de garde enregistré"), style = MaterialTheme.typography.titleMedium)
-                    val events = actual.parcels.flatMap { p -> p.history.map { "${it.createdAt} · ${p.id} · ${it.type}" } } + actual.returns.flatMap { r -> r.history.map { "${it.createdAt} · ${r.id} · ${it.action}" } }
-                    if(events.isEmpty()) Text(t("No history yet.", "Aucun historique.")) else events.sortedDescending().forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    val events = hubHistoryRows(actual.parcels, actual.returns)
+                    if (events.isEmpty()) Text(t("No history yet.", "Aucun historique.")) else events.forEach { HubHistoryCard(it, settings.language) }
                     Button(enabled = !busy, onClick = { scope.launch { busy = true; inbox = null; error = null; try { inbox = repository.inbox() } catch(e: Exception) { if(e is CancellationException) throw e; error = hubFailure(e, settings.language) } finally { busy = false } } }) { Text(t("Read my notification inbox", "Lire mes notifications")) }
-                    inbox?.let { messages -> if(messages.isEmpty()) Text(t("Your inbox is empty.", "Votre boîte est vide.")); messages.forEach { message -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text(message.title); Text(message.body); Text(message.createdAt, style = MaterialTheme.typography.labelSmall)
+                    inbox?.let { messages -> if(messages.isEmpty()) Text(t("Your inbox is empty.", "Votre boîte est vide.")); messages.forEach { message -> OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) { Text(message.title); Text(message.body); Text(hubHistoryTimestamp(message.createdAt), style = MaterialTheme.typography.labelSmall)
                         Row { listOf(if(message.readAt == null) "read" else null, if(message.archivedAt == null) "archive" else "unarchive").filterNotNull().forEach { action -> TextButton(enabled = !busy, onClick = { scope.launch { busy = true; inbox = null; try { repository.notification(message.id, action); inbox = repository.inbox() } catch(e: Exception) { if(e is CancellationException) throw e; error = hubFailure(e, settings.language) } finally { busy = false } } }) { Text(hubStatus(action, settings.language)) } } }
                     } } } }
                 }
@@ -286,9 +295,9 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
     }
     selected?.let { parcel -> AlertDialog(onDismissRequest = { if(!busy) { selected = null; clearCredential() } }, title = { Text(t("Parcel detail", "Détail du colis")) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(t("Deposited", "Déposé") + ": $it") }
+            Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(t("Deposited", "Déposé") + ": " + hubHistoryTimestamp(it)) }
             parcel.custody?.let { Text(t("Fee eligibility", "Éligibilité aux frais") + ": ${it.storageFeeEligible}"); Text(t("Review due", "Revue requise") + ": ${it.reviewDueAt}") }
-            parcel.history.forEach { Text("${it.createdAt} · ${it.type}", style = MaterialTheme.typography.bodySmall) }
+            HubRecordHistory(hubHistoryRows(listOf(parcel), emptyList()), settings.language)
             OutlinedTextField(raw, { raw = it.take(256); identity = false }, label = { Text(t("Customer PIN or QR nonce", "PIN client ou contenu QR")) })
             Row { Checkbox(qr, { qr = it; identity = false }); Text(t("QR value", "Valeur QR")) }
             Row { Checkbox(identity, { identity = it }); Text(t("Customer identity checked against presented document", "Identité du client vérifiée sur le document présenté")) }
