@@ -83,7 +83,7 @@ class LiveHubRepositoryTest {
                 "/api/hub/lockers" -> """[{"lockerId":"actual-slot","relayPointId":"site-a","lockerCode":"COUNTER-7","status":"OCCUPIED","updatedAt":"2026-11-08T12:00:00Z"}]"""
                 "/api/relay/parcels" -> """[{"id":"actual-parcel","relayPointId":"site-a","lockerId":"actual-slot","status":"Deposited","updatedAt":"2026-11-08T12:00:00Z"}]"""
                 "/api/relay/parcels/actual-parcel" -> { detailReads++
-                    """{"id":"actual-parcel","relayPointId":"site-a","lockerId":"actual-slot","status":"Delayed","updatedAt":"2026-11-08T12:04:00Z","history":[
+                    """{"id":"actual-parcel","publicReference":"P00-11Z-Z7J","relayPointId":"site-a","lockerId":"actual-slot","status":"Delayed","updatedAt":"2026-11-08T12:04:00Z","history":[
                         {"type":"Deposit","createdAt":"2026-11-08T12:00:00Z","actorUserId":"rider-a"},
                         {"type":"Problem","createdAt":"2026-11-08T12:01:00Z","message":"First recorded note"},
                         {"type":"Delay","createdAt":"2026-11-08T12:02:00Z"},
@@ -106,6 +106,7 @@ class LiveHubRepositoryTest {
         assertEquals("COUNTER-7", actual.slots.single().lockerCode)
         assertEquals("actual-parcel", actual.parcels.single().id)
         assertEquals("Delayed", actual.parcels.single().status)
+        assertEquals("P00-11Z-Z7J", actual.parcels.single().publicReference)
         assertEquals(5, actual.parcels.single().history.size)
         assertEquals("operator-a", actual.parcels.single().history.last().actorUserId)
         assertEquals("Operator followup", actual.parcels.single().history.last().message)
@@ -245,6 +246,52 @@ class LiveHubRepositoryTest {
         assertEquals("DELETE_MY_ACCOUNT", deletion.body.getValue("confirmation").jsonPrimitive.content)
         assertFalse("userId" in deletion.body)
         session.close()
+    }
+
+    @Test fun typedReturnReferencesValidateOfflineResolveWithScopeAndFreezeOnlyInternalIdActions() = runTest {
+        val lookups = mutableListOf<JsonObject>(); val writes = mutableListOf<String>()
+        var responseId = "canonical-return"; var responseKind = "RETURN"; var denied = false
+        val http = testClient { request ->
+            assertEquals("Bearer access", request.headers[HttpHeaders.Authorization])
+            when(request.url.encodedPath) {
+                "/api/auth/me" -> respond(user, headers = jsonHeaders)
+                "/api/references/resolve" -> {
+                    assertEquals(HttpMethod.Post, request.method)
+                    lookups += Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                    if(denied) respond("{}", HttpStatusCode.Forbidden, jsonHeaders)
+                    else respond("""{"kind":"$responseKind","id":"$responseId","publicReference":"R98-765-4Q4"}""", headers = jsonHeaders)
+                }
+                "/api/returns/canonical-return/relay-dropoff" -> {
+                    writes += (request.body as TextContent).text; respond("{}", headers = jsonHeaders)
+                }
+                else -> error("Unexpected reference/action route: ${request.url.encodedPath}")
+            }
+        }
+        val session = LiveHubSession(Store(), "https://local.fixture.invalid", http); session.restore()
+        try {
+            val repository = LiveScopedHubRepository(session)
+            for(value in listOf("R98-765-4Q5", "C12-345-6E6", "canonical-return")) {
+                assertFailsWith<IllegalArgumentException> { repository.resolveReturn("site-a", value) }
+            }
+            assertTrue(lookups.isEmpty(), "Invalid checksum/type must not reach HTTP.")
+            val resolved = repository.resolveReturn("site-a", " r987654q4 ")
+            assertEquals("canonical-return", resolved.id)
+            assertEquals(Json.parseToJsonElement("""{"kind":"RETURN","reference":"R98-765-4Q4","relayPointId":"site-a","legacyId":false}"""), lookups.single())
+            val intent = repository.returnIntent("site-a", resolved.id, "654321", "Actual received package")
+            repository.write(intent); repository.write(intent)
+            assertEquals(2, writes.size); assertEquals(writes.first(), writes.last())
+            assertEquals("654321", Json.parseToJsonElement(writes.first()).jsonObject.getValue("rawReturnPin").jsonPrimitive.content)
+            assertFalse(writes.first().contains("R98-765-4Q4"), "Display reference must not replace internal action identity or PIN.")
+            denied = true
+            assertEquals(403, assertFailsWith<SequoApiException> { repository.resolveReturn("site-a", "R98-765-4Q4") }.statusCode)
+            assertEquals(2, writes.size, "Lookup rejection must not execute intake.")
+            denied = false; responseKind = "ORDER"
+            assertFailsWith<IllegalArgumentException> { repository.resolveReturn("site-a", "R98-765-4Q4") }
+            responseKind = "RETURN"; responseId = "legacy-return"
+            assertEquals("legacy-return", repository.resolveReturn("site-a", "legacy-return", legacyId = true).id)
+            assertTrue(lookups.last().getValue("legacyId").jsonPrimitive.boolean)
+            assertEquals("legacy-return", lookups.last().getValue("reference").jsonPrimitive.content)
+        } finally { session.close() }
     }
 
     private class Store : AuthSessionStore {

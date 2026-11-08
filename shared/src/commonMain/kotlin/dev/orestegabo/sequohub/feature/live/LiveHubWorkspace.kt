@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import dev.orestegabo.sequo.design.*
+import dev.orestegabo.sequo.reference.HumanReference
+import dev.orestegabo.sequo.reference.PublicReferenceKind
 import dev.orestegabo.sequo.design.SequoActionButton as Button
 import dev.orestegabo.sequo.design.SequoOutlineButton as OutlinedButton
 import dev.orestegabo.sequohub.core.auth.*
@@ -100,6 +102,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
     var confirmation by remember { mutableStateOf<HubWriteIntent?>(null) }; var legal by remember { mutableStateOf(false) }
     var raw by remember { mutableStateOf("") }; var qr by remember { mutableStateOf(false) }; var identity by remember { mutableStateOf(false) }; var note by remember { mutableStateOf("") }
     var returnId by remember { mutableStateOf("") }; var returnPin by remember { mutableStateOf("") }
+    var legacyReturnId by remember { mutableStateOf(false) }
     var hours by remember { mutableStateOf<HubOpeningHoursResponse?>(null) }
     var savedPreferences by remember { mutableStateOf<LiveHubPreferences?>(null) }
     var preferenceError by remember { mutableStateOf<String?>(null) }
@@ -201,7 +204,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     Text(t("Parcels", "Colis"), style = MaterialTheme.typography.titleMedium)
                     if(actual.parcels.isEmpty()) Text(t("No parcel records at this relay.", "Aucun colis enregistré dans ce relais."))
                     actual.parcels.forEach { parcel -> SequoPanel(Modifier.fillMaxWidth().clip(SequoDesign.CardShape).clickable(role = Role.Button) { selected = parcel; clearCredential(); note = "" }) {
-                        Column(Modifier.padding(SequoDesign.CardPadding)) { Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(hubHistoryTimestamp(it), style = MaterialTheme.typography.bodySmall) }
+                        Column(Modifier.padding(SequoDesign.CardPadding)) { Text(parcel.publicReference?.takeIf(String::isNotBlank) ?: parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(hubHistoryTimestamp(it), style = MaterialTheme.typography.bodySmall) }
                             if(parcel.custody?.reviewDue == true) Text(t("Operator review due", "Revue opérateur requise"), color = MaterialTheme.colorScheme.error)
                         }
                     } }
@@ -215,16 +218,34 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                 }
                 1 -> {
                     Text(t("Customer return intake", "Réception de retour client"), style = MaterialTheme.typography.titleMedium)
-                    HubTextField(returnId, { returnId = it.take(128) }, label = { Text(t("Return ID", "Identifiant du retour")) }, modifier = Modifier.fillMaxWidth())
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Checkbox(legacyReturnId, { legacyReturnId = it; returnId = "" }, enabled = !busy && pending == null)
+                        Text(t("Use an older return ID", "Utiliser un ancien identifiant de retour"))
+                    }
+                    HubTextField(returnId, { returnId = it.take(128) }, label = { Text(if (legacyReturnId) t("Older return ID", "Ancien identifiant du retour") else t("Return reference", "Référence du retour")) }, modifier = Modifier.fillMaxWidth())
+                    val validReturnReference = legacyReturnId || HumanReference.isValid(returnId, PublicReferenceKind.RETURN)
+                    if (!legacyReturnId && returnId.isNotBlank() && !validReturnReference) {
+                        Text(t("Check the reference: enter the nine letters and numbers shown to the customer.", "Vérifiez la référence : saisissez les neuf lettres et chiffres affichés au client."), color = MaterialTheme.colorScheme.error)
+                    }
                     HubTextField(returnPin, { returnPin = it.filter(Char::isDigit).take(6) }, label = { Text(t("Server return PIN", "PIN de retour du serveur")) }, modifier = Modifier.fillMaxWidth())
                     HubTextField(note, { note = it.take(1000) }, label = { Text(t("Visible package condition (optional)", "État visible du colis (facultatif)")) }, modifier = Modifier.fillMaxWidth())
-                    Button(enabled = !busy && pending == null && returnId.isNotBlank() && returnPin.length == 6, onClick = { confirmation = repository.returnIntent(actual.site.id, returnId.trim(), returnPin, note) }) { Text(t("Confirm physical intake", "Confirmer la réception physique")) }
+                    Button(enabled = !busy && pending == null && returnId.isNotBlank() && validReturnReference && returnPin.length == 6, onClick = {
+                        val requestedReference = returnId; val requestedLegacy = legacyReturnId; val requestedPin = returnPin; val requestedNote = note
+                        scope.launch {
+                            busy = true; error = null
+                            try {
+                                val resolved = repository.resolveReturn(actual.site.id, requestedReference, requestedLegacy)
+                                confirmation = repository.returnIntent(actual.site.id, resolved.id, requestedPin, requestedNote)
+                            } catch(e: Exception) { if(e is CancellationException) throw e; error = hubFailure(e, settings.language) }
+                            finally { busy = false }
+                        }
+                    }) { Text(t("Confirm physical intake", "Confirmer la réception physique")) }
                     Text(t("Eligibility, route and PIN validation are owned by the server. Intake does not approve or execute a refund.", "Le serveur vérifie l'éligibilité, le relais et le PIN. La réception n'autorise ni n'exécute un remboursement."))
                     if(actual.returns.isEmpty()) Text(t("No received return records at this relay.", "Aucun retour reçu dans ce relais."))
                     actual.returns.forEach { returned ->
                         SequoPanel(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(SequoDesign.CardPadding), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(returned.id, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(returned.publicReference?.takeIf(String::isNotBlank) ?: returned.id, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(hubStatus(returned.status, settings.language))
                                 HubRecordHistory(hubHistoryRows(emptyList(), listOf(returned)), settings.language)
                             }
@@ -241,7 +262,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                     } } } }
                 }
                 else -> {
-                    Text(user.displayName ?: user.id, style = MaterialTheme.typography.titleMedium); Text(actual.site.name)
+                    Text(user.displayName?.takeIf(String::isNotBlank) ?: user.publicReference?.takeIf(String::isNotBlank) ?: t("Operator", "Opérateur"), style = MaterialTheme.typography.titleMedium); Text(actual.site.name)
                     Row { AppLanguage.entries.forEach { language -> TextButton(onClick = { onSettingsChange(settings.copy(language = language)) }) { Text(language.label) } } }
                     Row { ThemeMode.entries.forEach { mode -> TextButton(onClick = { onSettingsChange(settings.copy(themeMode = mode)) }) { Text(mode.label) } } }
                     preferenceError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -325,7 +346,7 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
     }
     selected?.let { parcel -> AlertDialog(onDismissRequest = { if(!busy) { selected = null; clearCredential() } }, title = { Text(t("Parcel detail", "Détail du colis")) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(t("Deposited", "Déposé") + ": " + hubHistoryTimestamp(it)) }
+            Text(parcel.publicReference?.takeIf(String::isNotBlank) ?: parcel.id); Text(hubStatus(parcel.status, settings.language)); parcel.depositedAt?.let { Text(t("Deposited", "Déposé") + ": " + hubHistoryTimestamp(it)) }
             parcel.custody?.let { Text(t("Fee eligibility", "Éligibilité aux frais") + ": ${it.storageFeeEligible}"); Text(t("Review due", "Revue requise") + ": ${it.reviewDueAt}") }
             HubRecordHistory(hubHistoryRows(listOf(parcel), emptyList()), settings.language)
             HubTextField(raw, { raw = it.take(256); identity = false }, label = { Text(t("Customer PIN or QR nonce", "PIN client ou contenu QR")) })

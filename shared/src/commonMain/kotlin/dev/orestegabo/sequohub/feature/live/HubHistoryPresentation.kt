@@ -19,12 +19,12 @@ import kotlin.time.Instant
 
 internal data class HubHistoryEntry(
     val action: String, val createdAt: String, val reference: String,
-    val actorUserId: String?, val details: String?,
+    val actorUserId: String?, val details: String?, val actorReference: String? = null,
 )
 
 internal fun hubHistoryRows(parcels: List<LiveHubParcel>, returns: List<LiveHubReturn>): List<HubHistoryEntry> =
-    (parcels.flatMap { parcel -> parcel.history.map { HubHistoryEntry(it.type, it.createdAt, parcel.id, it.actorUserId, it.message) } } +
-        returns.flatMap { returned -> returned.history.map { HubHistoryEntry(it.action, it.createdAt, returned.id, it.actorUserId, it.metadata) } })
+    (parcels.flatMap { parcel -> parcel.history.map { HubHistoryEntry(it.type, it.createdAt, parcel.publicReference?.takeIf(String::isNotBlank) ?: parcel.id, it.actorUserId, it.message, it.actorReference) } } +
+        returns.flatMap { returned -> returned.history.map { HubHistoryEntry(it.action, it.createdAt, returned.publicReference?.takeIf(String::isNotBlank) ?: returned.id, it.actorUserId, it.metadata, it.actorReference) } })
         .sortedWith(compareByDescending<HubHistoryEntry> { runCatching { Instant.parse(it.createdAt) }.getOrNull() })
 
 internal fun hubHistoryTimestamp(raw: String): String = runCatching {
@@ -42,7 +42,7 @@ internal fun HubHistoryCard(entry: HubHistoryEntry, language: AppLanguage) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(entry.reference, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             entry.actorUserId?.takeIf(String::isNotBlank)?.let { actor ->
-                Text((if (french) "Enregistré par : " else "Recorded by: ") + actor,
+                Text((if (french) "Enregistré par : " else "Recorded by: ") + (entry.actorReference?.takeIf(String::isNotBlank) ?: actor),
                     style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
@@ -53,7 +53,7 @@ internal fun HubHistoryCard(entry: HubHistoryEntry, language: AppLanguage) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(entry.reference, style = MaterialTheme.typography.bodySmall)
                     Text(entry.createdAt, style = MaterialTheme.typography.bodySmall)
-                    entry.actorUserId?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                    entry.actorUserId?.takeIf(String::isNotBlank)?.let { Text(entry.actorReference?.takeIf(String::isNotBlank) ?: it, style = MaterialTheme.typography.bodySmall) }
                     entry.details?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
             }

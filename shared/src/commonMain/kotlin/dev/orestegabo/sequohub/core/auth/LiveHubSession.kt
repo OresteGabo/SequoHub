@@ -14,7 +14,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
-@Serializable data class HubCurrentUser(val id: String, val displayName: String? = null, val email: String? = null, val active: Boolean, val status: String, val roles: List<String> = emptyList())
+@Serializable data class HubCurrentUser(val id: String, val displayName: String? = null, val email: String? = null, val active: Boolean, val status: String, val roles: List<String> = emptyList(), val publicReference: String? = null)
 @Serializable data class HubFixtureAccount(val key: String, val label: String)
 @Serializable data class HubFixtureAccess(val enabled: Boolean = false, val mode: String? = null, val accounts: List<HubFixtureAccount> = emptyList())
 @Serializable private data class FixtureLogin(val appSource: String, val accountKey: String, val deviceId: String, val deviceLabel: String = "SequoHub local fixture")

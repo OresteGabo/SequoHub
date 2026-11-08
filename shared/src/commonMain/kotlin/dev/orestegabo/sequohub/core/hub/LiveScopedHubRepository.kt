@@ -1,5 +1,7 @@
 package dev.orestegabo.sequohub.core.hub
 
+import dev.orestegabo.sequo.reference.HumanReference
+import dev.orestegabo.sequo.reference.PublicReferenceKind
 import dev.orestegabo.sequohub.core.auth.LiveHubSession
 import dev.orestegabo.sequohub.core.auth.hubOperationId
 import dev.orestegabo.sequohub.core.localization.SequoStrings
@@ -12,15 +14,18 @@ import kotlinx.serialization.json.*
 @Serializable data class AssignedHub(val id: String, val name: String)
 @Serializable data class LiveHubSlot(val lockerId: String, val relayPointId: String, val lockerCode: String, val status: String,
     val reason: String? = null, val expectedAvailableAt: String? = null, val updatedAt: String)
-@Serializable data class LiveCustodyEvent(val type: String, val createdAt: String, val message: String? = null, val actorUserId: String? = null)
+@Serializable data class LiveCustodyEvent(val type: String, val createdAt: String, val message: String? = null, val actorUserId: String? = null, val actorReference: String? = null)
 @Serializable data class LiveDeadlines(val feeStartsAt: String? = null, val reviewDueAt: String, val storageFeeEligible: Boolean,
     val reviewDue: Boolean, val feePolicyKnown: Boolean)
 @Serializable data class LiveHubParcel(val id: String, val relayPointId: String, val lockerId: String? = null, val orderId: String? = null,
     val status: String, val depositedAt: String? = null, val pickedUpAt: String? = null, val collectedAt: String? = null,
-    val updatedAt: String, val history: List<LiveCustodyEvent> = emptyList(), val custody: LiveDeadlines? = null)
-@Serializable data class LiveReturnEvent(val action: String, val createdAt: String, val actorUserId: String? = null, val metadata: String? = null)
+    val updatedAt: String, val history: List<LiveCustodyEvent> = emptyList(), val custody: LiveDeadlines? = null,
+    val publicReference: String? = null, val orderReference: String? = null)
+@Serializable data class LiveReturnEvent(val action: String, val createdAt: String, val actorUserId: String? = null, val metadata: String? = null, val actorReference: String? = null)
 @Serializable data class LiveHubReturn(val id: String, val orderId: String, val status: String, val relayPointId: String? = null,
-    val requestedAt: String, val droppedAt: String? = null, val collectedBySequoAt: String? = null, val history: List<LiveReturnEvent> = emptyList())
+    val requestedAt: String, val droppedAt: String? = null, val collectedBySequoAt: String? = null, val history: List<LiveReturnEvent> = emptyList(),
+    val publicReference: String? = null, val orderReference: String? = null)
+@Serializable data class HubReferenceResolution(val kind: String, val id: String, val publicReference: String? = null)
 @Serializable data class LiveHubNotification(val id: String, val title: String, val body: String, val createdAt: String,
     val readAt: String? = null, val archivedAt: String? = null)
 data class LiveHubSnapshot(val site: AssignedHub, val slots: List<LiveHubSlot>, val parcels: List<LiveHubParcel>,
@@ -63,6 +68,22 @@ class LiveScopedHubRepository(private val session: LiveHubSession) : HubReposito
     fun problemIntent(parcelId: String, note: String): HubWriteIntent {
         require(note.isNotBlank() && note.length <= 2000); val key = hubOperationId()
         return HubWriteIntent("/api/relay/parcels/${parcelId.encodeURLPathPart()}/problem", buildJsonObject { put("metadata", note); put("eventId", key); put("idempotencyKey", key) })
+    }
+    suspend fun resolveReturn(siteId: String, value: String, legacyId: Boolean = false): HubReferenceResolution {
+        require(siteId.isNotBlank())
+        val reference = value.trim()
+        require(reference.isNotBlank() && reference.length <= 128) { "Enter the return reference." }
+        val canonical = if (legacyId) reference else {
+            require(HumanReference.isValid(reference, PublicReferenceKind.RETURN)) { "Check the return reference and its checksum." }
+            requireNotNull(HumanReference.normalize(reference))
+        }
+        val resolved: HubReferenceResolution = call("/api/references/resolve", HttpMethod.Post, buildJsonObject {
+            put("kind", "RETURN"); put("reference", canonical); put("relayPointId", siteId); put("legacyId", legacyId)
+        })
+        require(resolved.kind == "RETURN" && resolved.id.isNotBlank()) { "The server returned another reference type." }
+        if (legacyId) require(resolved.id == canonical) { "The server returned another return." }
+        else require(resolved.publicReference == canonical) { "The server returned another return reference." }
+        return resolved
     }
     fun returnIntent(siteId: String, returnId: String, pin: String, note: String): HubWriteIntent {
         require(returnId.isNotBlank() && pin.matches(Regex("[0-9]{6}"))); val key = hubOperationId()
