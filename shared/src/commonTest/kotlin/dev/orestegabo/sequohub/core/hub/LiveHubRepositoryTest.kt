@@ -75,12 +75,22 @@ class LiveHubRepositoryTest {
 
     @Test fun realScopedRowsAndStableCredentialWritesHaveNoSampleFallback() = runTest {
         val requests = mutableListOf<HttpRequestData>()
+        var detailReads = 0
         val client = testClient { request -> requests += request
             val payload = when(request.url.encodedPath) {
                 "/api/auth/me" -> user
                 "/api/relay/parcels/sites" -> """[{"id":"site-a","name":"Actual assigned relay"}]"""
                 "/api/hub/lockers" -> """[{"lockerId":"actual-slot","relayPointId":"site-a","lockerCode":"COUNTER-7","status":"OCCUPIED","updatedAt":"2026-11-08T12:00:00Z"}]"""
-                "/api/relay/parcels" -> """[{"id":"actual-parcel","relayPointId":"site-a","lockerId":"actual-slot","status":"Deposited","updatedAt":"2026-11-08T12:00:00Z","history":[{"type":"Deposit","createdAt":"2026-11-08T12:00:00Z"}]}]"""
+                "/api/relay/parcels" -> """[{"id":"actual-parcel","relayPointId":"site-a","lockerId":"actual-slot","status":"Deposited","updatedAt":"2026-11-08T12:00:00Z"}]"""
+                "/api/relay/parcels/actual-parcel" -> { detailReads++
+                    """{"id":"actual-parcel","relayPointId":"site-a","lockerId":"actual-slot","status":"Delayed","updatedAt":"2026-11-08T12:04:00Z","history":[
+                        {"type":"Deposit","createdAt":"2026-11-08T12:00:00Z","actorUserId":"rider-a"},
+                        {"type":"Problem","createdAt":"2026-11-08T12:01:00Z","message":"First recorded note"},
+                        {"type":"Delay","createdAt":"2026-11-08T12:02:00Z"},
+                        {"type":"Review","createdAt":"2026-11-08T12:03:00Z"},
+                        {"type":"Problem","createdAt":"2026-11-08T12:04:00Z","message":"Operator followup","actorUserId":"operator-a"}
+                    ]}"""
+                }
                 "/api/returns/relay" -> "[]"
                 "/api/hub/control-state" -> """{"relayPointId":"site-a","effectiveMode":"NORMAL","hub":{"target":"HUB","status":"ACTIVE"},"generatedAt":"2026-11-08T12:00:00Z"}"""
                 "/api/hub/opening-hours" -> """{"relayPointId":"site-a","timezone":"Africa/Lome","weeklyHours":[],"exceptions":[]}"""
@@ -95,6 +105,16 @@ class LiveHubRepositoryTest {
         assertEquals("actual-slot", actual.slots.single().lockerId)
         assertEquals("COUNTER-7", actual.slots.single().lockerCode)
         assertEquals("actual-parcel", actual.parcels.single().id)
+        assertEquals("Delayed", actual.parcels.single().status)
+        assertEquals(5, actual.parcels.single().history.size)
+        assertEquals("operator-a", actual.parcels.single().history.last().actorUserId)
+        assertEquals("Operator followup", actual.parcels.single().history.last().message)
+        assertEquals(1, detailReads)
+        assertEquals(5, repository.snapshot(site).parcels.single().history.size)
+        assertEquals(2, detailReads) // Refresh rereads authoritative history rather than caching a list projection.
+        assertTrue(requests.filter { it.url.encodedPath == "/api/relay/parcels/actual-parcel" }.all {
+            it.method == HttpMethod.Get && it.url.parameters["relayPointId"] == "site-a"
+        })
         assertTrue(actual.openingHours.weeklyHours.isEmpty())
         assertTrue(requests.all { it.headers[HttpHeaders.Authorization] == "Bearer access" })
         assertTrue(requests.filter { it.url.encodedPath in setOf("/api/hub/lockers", "/api/returns/relay", "/api/relay/parcels") }.all { it.url.parameters["relayPointId"] == "site-a" })
@@ -108,6 +128,47 @@ class LiveHubRepositoryTest {
         assertEquals(true, submitted.getValue("identityDocumentMatched").jsonPrimitive.boolean)
         assertFalse("rawNumericCode" in submitted)
         session.close()
+    }
+
+    @Test fun failedOrMismatchedScopedDetailsNeverBecomeEmptyHistory() = runTest {
+        for (mode in listOf("forbidden", "missing", "unavailable", "wrong-site", "wrong-id", "wrong-list-site")) {
+            val requests = mutableListOf<HttpRequestData>()
+            val http = testClient { request ->
+                requests += request
+                when (request.url.encodedPath) {
+                    "/api/auth/me" -> respond(user, headers = jsonHeaders)
+                    "/api/hub/lockers" -> respond("[]", headers = jsonHeaders)
+                    "/api/relay/parcels" -> {
+                        val site = if (mode == "wrong-list-site") "site-b" else "site-a"
+                        val row = buildJsonObject { put("id", "actual-parcel"); put("relayPointId", site); put("status", "Deposited"); put("updatedAt", "2026-11-08T12:00:00Z") }
+                        respond(JsonArray(listOf(row)).toString(), headers = jsonHeaders)
+                    }
+                    "/api/relay/parcels/actual-parcel" -> when (mode) {
+                        "forbidden" -> respond("{}", HttpStatusCode.Forbidden, jsonHeaders)
+                        "missing" -> respond("{}", HttpStatusCode.NotFound, jsonHeaders)
+                        "unavailable" -> respond("{}", HttpStatusCode.ServiceUnavailable, jsonHeaders)
+                        else -> {
+                            val id = if (mode == "wrong-id") "another-parcel" else "actual-parcel"
+                            val site = if (mode == "wrong-site") "site-b" else "site-a"
+                            val row = buildJsonObject { put("id", id); put("relayPointId", site); put("status", "Deposited"); put("updatedAt", "2026-11-08T12:00:00Z"); put("history", JsonArray(emptyList())) }
+                            respond(row.toString(), headers = jsonHeaders)
+                        }
+                    }
+                    else -> error("No snapshot should be published after an unconfirmed detail read")
+                }
+            }
+            val session = LiveHubSession(Store(), "https://local.fixture.invalid", http)
+            session.restore()
+            val repository = LiveScopedHubRepository(session)
+            val failure = assertFails { repository.snapshot(AssignedHub("site-a", "Actual relay")) }
+            if (mode.startsWith("wrong-")) assertIs<IllegalArgumentException>(failure)
+            if (mode in setOf("forbidden", "missing")) assertIs<SequoApiException>(failure)
+            val details = requests.filter { it.url.encodedPath == "/api/relay/parcels/actual-parcel" }
+            assertEquals(if (mode == "wrong-list-site") 0 else 1, details.size)
+            assertTrue(details.all { it.url.parameters["relayPointId"] == "site-a" })
+            assertTrue(requests.all { it.method == HttpMethod.Get && it.headers[HttpHeaders.Authorization] == "Bearer access" })
+            session.close()
+        }
     }
 
     @Test fun wrongSiteOrFailedControlReadNeverProducesOnlineFallback() = runTest {

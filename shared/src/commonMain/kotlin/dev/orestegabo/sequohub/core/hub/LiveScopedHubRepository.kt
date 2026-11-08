@@ -37,14 +37,19 @@ class LiveScopedHubRepository(private val session: LiveHubSession) : HubReposito
     suspend fun snapshot(site: AssignedHub): LiveHubSnapshot {
         val encoded = site.id.encodeURLPathPart()
         val slots: List<LiveHubSlot> = call("/api/hub/lockers?relayPointId=$encoded")
-        val parcels: List<LiveHubParcel> = call("/api/relay/parcels?relayPointId=$encoded")
+        val parcelRows: List<LiveHubParcel> = call("/api/relay/parcels?relayPointId=$encoded")
+        require(parcelRows.all { it.relayPointId == site.id }) { "The server returned another relay's data. Refresh your assignment." }
+        // The list omits custody history; use the existing scoped detail read before publishing records.
+        val parcels = parcelRows.map { parcel(site.id, it.id) }
         val returns: List<LiveHubReturn> = call("/api/returns/relay?relayPointId=$encoded")
         val control: HubControlStateResponse = call("/api/hub/control-state?relayPointId=$encoded")
         val hours: HubOpeningHoursResponse = call("/api/hub/opening-hours?relayPointId=$encoded")
         require(slots.all { it.relayPointId == site.id } && parcels.all { it.relayPointId == site.id } && returns.all { it.relayPointId == site.id } && control.relayPointId == site.id && hours.relayPointId == site.id) { "The server returned another relay's data. Refresh your assignment." }
         return LiveHubSnapshot(site, slots, parcels, returns, control, hours)
     }
-    suspend fun parcel(siteId: String, parcelId: String): LiveHubParcel = call<LiveHubParcel>("/api/relay/parcels/${parcelId.encodeURLPathPart()}?relayPointId=${siteId.encodeURLPathPart()}").also { require(it.relayPointId == siteId) }
+    suspend fun parcel(siteId: String, parcelId: String): LiveHubParcel = call<LiveHubParcel>("/api/relay/parcels/${parcelId.encodeURLPathPart()}?relayPointId=${siteId.encodeURLPathPart()}").also {
+        require(it.id == parcelId && it.relayPointId == siteId) { "The server returned another relay's parcel. Refresh your assignment." }
+    }
     suspend fun scan(siteId: String, raw: String): HubScanResolutionResponse = call("/api/hub/scan/resolve", HttpMethod.Post,
         buildJsonObject { put("hubId", siteId); put("credential", raw); put("credentialType", "AUTO"); put("idempotencyKey", hubOperationId()) })
     fun releaseIntent(siteId: String, parcelId: String, raw: String, qr: Boolean, identityChecked: Boolean): HubWriteIntent {
