@@ -47,6 +47,16 @@ class LiveHubSession(private val store: AuthSessionStore, private val baseUrl: S
         stateMutex.withLock { checkCurrent(ticket); store.save(requireNotNull(saved)); user = actual; scopeIdentity = "$ticket:${actual.id}" }
         return actual
     }
+    suspend fun testAccountsAvailable(): Boolean = client.get("$baseUrl/api/auth/test-accounts").body<TestCapability>().enabled
+    suspend fun testLogin(username: String, password: String): HubCurrentUser {
+        val device = "hub-test-${hubOperationId()}"
+        val tokens: AuthSession = client.post("$baseUrl/api/auth/test-accounts/session") {
+            contentType(ContentType.Application.Json)
+            setBody(TestLoginRequest(username,password,"HUB",TestLoginDevice(device,"SEQUO_HUB")))
+        }.body()
+        return accept(tokens.copy(deviceId = device))
+    }
+
     suspend fun fixtureAccess(): HubFixtureAccess {
         if(!NetworkConfig.IsLocalFixture) return HubFixtureAccess()
         return client.get("$baseUrl/api/auth/development-access") { parameter("appSource", "SEQUO_HUB") }.body()
@@ -102,3 +112,7 @@ class LiveHubSession(private val store: AuthSessionStore, private val baseUrl: S
     }
     fun close() = client.close()
 }
+
+@Serializable private data class TestCapability(val enabled: Boolean = false)
+@Serializable private data class TestLoginRequest(val username:String,val password:String,val appFamily:String,val device:TestLoginDevice)
+@Serializable private data class TestLoginDevice(val deviceId:String,val appSource:String)

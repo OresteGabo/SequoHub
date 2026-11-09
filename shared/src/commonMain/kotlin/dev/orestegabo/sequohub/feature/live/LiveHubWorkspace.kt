@@ -89,6 +89,9 @@ fun HubSessionGate(settings: SettingsUiState, onSettingsChange: (SettingsUiState
                     } }) { Text(account.label) }
                 } }
             }
+            dev.orestegabo.sequohub.feature.auth.TestAccountLoginEntry(session::testAccountsAvailable,
+                onSignIn = { username, password -> user = session.testLogin(username,password) }, french = settings.language == AppLanguage.French,
+                modifier = Modifier.fillMaxWidth())
             TextButton(enabled = !busy, onClick = onExploreDemo) { Text(t("Explore demo · sample data only", "Explorer la démo · données fictives")) }
         } }
     }
