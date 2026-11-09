@@ -15,7 +15,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3BF36A080B9951039FA4D727 /* Exceptions for "iosApp" folder in "iosApp" target */ = {
+		3BF36A080B9951039FA4D727 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -27,13 +27,21 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		DE6380D6D91E1E4853AFED50 /* Configuration */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
 			path = Configuration;
 			sourceTree = "<group>";
 		};
 		DF15C1DB7419D2FA62DE075D /* iosApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3BF36A080B9951039FA4D727 /* Exceptions for "iosApp" folder in "iosApp" target */,
+				3BF36A080B9951039FA4D727 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -120,11 +128,11 @@
 			);
 			mainGroup = 18328E61F9B8448D29D3C07B;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = 03F8EC3327A1499A3E1D44B6 /* Products */;
 			packageReferences = (
 				C3D4E5F60123456789012345 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 03F8EC3327A1499A3E1D44B6 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (

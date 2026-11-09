@@ -1,5 +1,7 @@
 package dev.orestegabo.sequohub.feature.auth
 
+import dev.orestegabo.sequo.design.sequoBrandWordmarkPainter
+import dev.orestegabo.sequo.design.sequoBrandSymbolPainter
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -82,9 +84,6 @@ import sequohub.shared.generated.resources.auth_fingerprint
 import sequohub.shared.generated.resources.onboarding_history
 import sequohub.shared.generated.resources.onboarding_pickup_flow
 import sequohub.shared.generated.resources.onboarding_scan_arrivals
-import sequohub.shared.generated.resources.sequohub_logo_mark
-import sequohub.shared.generated.resources.sequohub_logo_text
-
 @Composable
 fun AuthScreen(
     language: AppLanguage,
@@ -996,7 +995,7 @@ private fun BrandMark(
 @Composable
 private fun SequoHubMark(modifier: Modifier = Modifier) {
     Image(
-        painter = painterResource(Res.drawable.sequohub_logo_mark),
+        painter = sequoBrandSymbolPainter(),
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = modifier,
@@ -1006,7 +1005,7 @@ private fun SequoHubMark(modifier: Modifier = Modifier) {
 @Composable
 private fun SequoHubWordmark(modifier: Modifier = Modifier) {
     Image(
-        painter = painterResource(Res.drawable.sequohub_logo_text),
+        painter = sequoBrandWordmarkPainter(),
         contentDescription = "SequoHub",
         contentScale = ContentScale.Fit,
         modifier = modifier,

@@ -1,5 +1,6 @@
 package dev.orestegabo.sequohub.feature.splash
 
+import dev.orestegabo.sequo.design.sequoBrandLogoPainter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -40,7 +41,6 @@ import dev.orestegabo.sequohub.core.designsystem.theme.SequoHubTheme
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 import sequohub.shared.generated.resources.Res
-import sequohub.shared.generated.resources.sequohub_logo_full
 import kotlin.math.max
 
 private const val SplashTimeoutMillis = 2_000L
@@ -79,7 +79,7 @@ fun SplashScreen(
                 .padding(horizontal = 34.dp),
         ) {
             Image(
-                painter = painterResource(Res.drawable.sequohub_logo_full),
+                painter = sequoBrandLogoPainter(stacked = true),
                 contentDescription = "SequoHub",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
