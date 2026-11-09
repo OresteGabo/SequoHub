@@ -80,7 +80,7 @@ When a customer is not home, Sequo can reroute non-perishable packages to the ne
 
 ### 4. Storage Penalty Processing
 
-The free storage window is 14 days. Once a package has been held for more than 2 weeks, extra storage fees accrue according to Admin configuration. After 1 month by default, the package is marked for return to seller unless Support applies a documented hold.
+Under the default policy, storage fees may apply strictly after 8 days from deposit using an operator-supplied rate. At 30 days, uncollected packages are due for operator review. An authorized operator decides the disposition.
 
 ### 5. Customer Return Drop-Off
 

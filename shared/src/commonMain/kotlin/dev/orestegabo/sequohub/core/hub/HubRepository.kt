@@ -87,7 +87,7 @@ class FakeHubRepository : HubRepository {
                 occupiedLockerCount = occupied,
                 underGracePackageCount = lockers.count { it.state == LockerState.Occupied && it.feeDueCfa == 0 && !it.returnToSellerDue },
                 feeDuePackageCount = feesDue,
-                overduePackageCount = lockers.count { it.daysStored > 14 },
+                overduePackageCount = lockers.count { it.daysStored > 8 },
                 returnToSellerDueCount = lockers.count { it.returnToSellerDue },
                 pendingSequoCollectionCount = 2,
                 openIncidentCount = lockers.count { it.state == LockerState.Maintenance },

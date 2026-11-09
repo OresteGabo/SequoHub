@@ -355,8 +355,8 @@ private val termsDocument = LegalDocument(
         LegalSection(
             title = "4. Storage, fees, and returns",
             paragraphs = listOf(
-                "The default free storage window is 14 days after the package becomes available for pickup. Extra storage fees may apply after the free window according to backend/Admin configuration. Fee amounts must come from backend rules and must be visible before handover.",
-                "By default, uncollected packages may enter return-to-seller handling after about one month, subject to active configuration and Support holds. Normal customer pickup may be blocked after the return threshold unless Support grants a documented exception.",
+                "Storage fees may apply once a package has been held for more than 8 days from deposit under the default policy. The backend supplies the assessed amount.",
+                "By default, uncollected packages become due for operator review 30 days after deposit. An authorized operator decides whether to return the package to the seller or apply SEQUO policy.",
                 "Customer returns must be authorized by Sequo, presented with a valid return QR or numeric code, and dropped off within 72 hours of delivery unless Support creates an override. Hub staff receive and store returns only; Sequo performs final validation before refund processing.",
             ),
         ),

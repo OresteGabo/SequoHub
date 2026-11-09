@@ -96,7 +96,7 @@ fun HubDashboard(
                     modifier = Modifier.weight(1f),
                     label = strings.underGrace,
                     value = (operationalState?.summary?.underGracePackageCount ?: effectiveLockers.count { it.state == LockerState.Occupied && it.feeDueCfa == 0 && !it.returnToSellerDue }).toString(),
-                    note = "14 days",
+                    note = strings.daysStored,
                 )
                 MetricCard(
                     modifier = Modifier.weight(1f),
@@ -109,7 +109,7 @@ fun HubDashboard(
                 MetricCard(
                     modifier = Modifier.weight(1f),
                     label = strings.overdue,
-                    value = (operationalState?.summary?.overduePackageCount ?: effectiveLockers.count { it.daysStored > 14 }).toString(),
+                    value = (operationalState?.summary?.overduePackageCount ?: effectiveLockers.count { it.daysStored > 8 }).toString(),
                     note = strings.daysStored,
                 )
                 MetricCard(
