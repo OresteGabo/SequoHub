@@ -11,10 +11,16 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
@@ -94,6 +100,8 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
     onSettingsChange: (SettingsUiState) -> Unit, onLogout: () -> Unit) {
     val repository = remember(session) { LiveScopedHubRepository(session) }
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val returnKeyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
     var sites by remember { mutableStateOf<List<AssignedHub>>(emptyList()) }; var site by remember { mutableStateOf<AssignedHub?>(null) }
     var snapshot by remember { mutableStateOf<LiveHubSnapshot?>(null) }; var selected by remember { mutableStateOf<LiveHubParcel?>(null) }
     var inbox by remember { mutableStateOf<List<LiveHubNotification>?>(null) }
@@ -222,12 +230,23 @@ private fun LiveHubWorkspace(session: LiveHubSession, user: HubCurrentUser, sett
                         Checkbox(legacyReturnId, { legacyReturnId = it; returnId = "" }, enabled = !busy && pending == null)
                         Text(t("Use an older return ID", "Utiliser un ancien identifiant de retour"))
                     }
-                    HubTextField(returnId, { returnId = it.take(128) }, label = { Text(if (legacyReturnId) t("Older return ID", "Ancien identifiant du retour") else t("Return reference", "Référence du retour")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(returnId, { returnId = it.take(128) },
+                        label = { Text(if (legacyReturnId) t("Older return ID", "Ancien identifiant du retour") else t("Return reference", "Référence du retour")) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = if (legacyReturnId) KeyboardCapitalization.None else KeyboardCapitalization.Characters,
+                            autoCorrectEnabled = false, keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
+                        keyboardActions = returnKeyboardActions)
                     val validReturnReference = legacyReturnId || HumanReference.isValid(returnId, PublicReferenceKind.RETURN)
                     if (!legacyReturnId && returnId.isNotBlank() && !validReturnReference) {
                         Text(t("Check the reference: enter the nine letters and numbers shown to the customer.", "Vérifiez la référence : saisissez les neuf lettres et chiffres affichés au client."), color = MaterialTheme.colorScheme.error)
                     }
-                    HubTextField(returnPin, { returnPin = it.filter(Char::isDigit).take(6) }, label = { Text(t("Server return PIN", "PIN de retour du serveur")) }, modifier = Modifier.fillMaxWidth())
+                    HubTextField(returnPin, { returnPin = it.filter(Char::isDigit).take(6) },
+                        label = { Text(t("Server return PIN", "PIN de retour du serveur")) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                        keyboardActions = returnKeyboardActions,
+                        trailingIcon = { TextButton(onClick = { focusManager.clearFocus() }) { Text(t("Done", "Terminé")) } })
                     HubTextField(note, { note = it.take(1000) }, label = { Text(t("Visible package condition (optional)", "État visible du colis (facultatif)")) }, modifier = Modifier.fillMaxWidth())
                     Button(enabled = !busy && pending == null && returnId.isNotBlank() && validReturnReference && returnPin.length == 6, onClick = {
                         val requestedReference = returnId; val requestedLegacy = legacyReturnId; val requestedPin = returnPin; val requestedNote = note
@@ -380,8 +399,13 @@ private fun HubTextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: (@Composable () -> Unit)? = null,
+    singleLine: Boolean = false,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+    trailingIcon: (@Composable () -> Unit)? = null,
 ) {
     OutlinedTextField(value = value, onValueChange = onValueChange,
         modifier = modifier.heightIn(min = SequoDesign.ControlHeight), label = label,
-        shape = MaterialTheme.shapes.extraSmall)
+        singleLine = singleLine, keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
+        trailingIcon = trailingIcon, shape = MaterialTheme.shapes.extraSmall)
 }
