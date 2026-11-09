@@ -43,7 +43,7 @@ class LiveHubSession(private val store: AuthSessionStore, private val baseUrl: S
     }
     private suspend fun verify(ticket: Long): HubCurrentUser {
         val actual = me()
-        require(actual.active && actual.status == "ACTIVE" && actual.roles.any { it in setOf("RELAY_PARTNER", "ADMIN", "SUPER_ADMIN") }) { "This account is not authorized to operate a relay. Ask SEQUO to review its role and relay assignment." }
+        require(actual.active && actual.status == "ACTIVE" && actual.roles.any { it in setOf("RELAY_PARTNER", "ADMIN", "STAFF_MANAGER", "SUPER_ADMIN") }) { "This account is not authorized to operate a relay. Ask SEQUO to review its role and relay assignment." }
         stateMutex.withLock { checkCurrent(ticket); store.save(requireNotNull(saved)); user = actual; scopeIdentity = "$ticket:${actual.id}" }
         return actual
     }
